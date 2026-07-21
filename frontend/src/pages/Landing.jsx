@@ -39,6 +39,17 @@ export default function Landing() {
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center parchment-noise">
       <div className="mx-auto w-full max-w-[460px] px-5 pt-10 pb-32">
+        {/* Problem statement — contest voter hook */}
+        <div className="text-center mb-8" data-testid="landing-problem-statement">
+          <p className="font-ui text-[12px] uppercase tracking-[0.22em] text-wax">
+            84% of private pledges fail
+          </p>
+          <p className="mt-1 font-serif-display text-[15px] text-ink-600 leading-snug">
+            Pledgebond makes accountability <span className="not-italic text-ink">public</span>.
+            <br />Your vow is witnessed. Your stake flows to charity if you break it.
+          </p>
+        </div>
+
         {/* Masthead */}
         <div className="text-center">
           <WaxStamp variant="burgundy" className="mb-3">A Ritual of Pledges</WaxStamp>

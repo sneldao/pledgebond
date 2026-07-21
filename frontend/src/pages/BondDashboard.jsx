@@ -235,6 +235,34 @@ export default function BondDashboard() {
 
   return (
     <AppShell showBack backTo="/explore">
+      {/* Guest witness banner — shown when arriving via shared link without a session */}
+      {!session?.displayName && (bond.status === "pending" || bond.status === "active") && (
+        <GuestWitnessBanner
+          bond={bond}
+          onWitness={async (name) => {
+            try {
+              setWitnessing(true);
+              unlockAudio();
+              // Create a lightweight session on the fly
+              const { setSession } = await import("@/lib/session");
+              setSession({ displayName: name, role: "organizer", color: "#1F6B4E" });
+              const b = await api.witnessBond(id, { display_name: name, color: "#1F6B4E" });
+              markWitnessed(id);
+              sfx.pledgeIn();
+              setBond(b);
+              toast.success("You're now witnessing.", { description: "We'll notify you when proof is submitted or the bond releases." });
+              // Reload to pick up the new session in AppShell
+              setTimeout(() => window.location.reload(), 800);
+            } catch (e) {
+              toast.error("Could not witness", { description: e?.response?.data?.detail || e.message });
+            } finally {
+              setWitnessing(false);
+            }
+          }}
+          witnessing={witnessing}
+        />
+      )}
+
       {/* Header */}
       <div className="pt-3">
         <div className="flex items-center justify-between gap-2">
@@ -503,6 +531,42 @@ export default function BondDashboard() {
         )}
       </AnimatePresence>
     </AppShell>
+  );
+}
+
+function GuestWitnessBanner({ bond, onWitness, witnessing }) {
+  const [name, setName] = useState("");
+  return (
+    <div className="mt-3 ornate-frame p-4" data-testid="guest-witness-banner">
+      <div className="flex items-center gap-2 mb-2">
+        <Eye size={16} className="text-emerald-800" />
+        <span className="font-serif-display text-[16px] text-ink">You're witnessing a pledge</span>
+      </div>
+      <p className="font-ui text-[12px] text-ink-600 mb-3">
+        Enter your name to follow this bond. We'll notify you when proof is logged or the vault opens. No account needed.
+      </p>
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Your name..."
+          data-testid="guest-witness-name-input"
+          className="flex-1 px-3 py-2 bg-parchment-50 border-b-2 border-ink outline-none font-ui text-[14px] text-ink focus:border-wax transition-colors"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && name.trim() && !witnessing) onWitness(name.trim());
+          }}
+        />
+        <button
+          onClick={() => name.trim() && !witnessing && onWitness(name.trim())}
+          disabled={!name.trim() || witnessing}
+          data-testid="guest-witness-submit"
+          className="px-4 py-2 text-[13px] font-ui border border-emerald-800 text-emerald-800 hover:bg-emerald-800 hover:text-parchment transition-colors disabled:opacity-40"
+        >
+          {witnessing ? "..." : "Witness"}
+        </button>
+      </div>
+    </div>
   );
 }
 
