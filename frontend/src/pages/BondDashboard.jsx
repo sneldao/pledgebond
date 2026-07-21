@@ -7,10 +7,10 @@ import WaxStamp from "@/components/WaxStamp";
 import RibbonButton from "@/components/RibbonButton";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
-import { getSession, markJoined, getMyParticipantId } from "@/lib/session";
+import { getSession, markJoined, getMyParticipantId, markWitnessed, isWitnessing } from "@/lib/session";
 import { sfx, unlockAudio } from "@/lib/sound";
 import { toast } from "sonner";
-import { Check, Trophy, Share2, RotateCcw, Sparkles } from "lucide-react";
+import { Check, Trophy, Share2, RotateCcw, Sparkles, Eye, Copy, Download, X } from "lucide-react";
 
 function fmtCountdown(iso) {
   const dt = new Date(iso).getTime();
@@ -33,6 +33,8 @@ export default function BondDashboard() {
   const [bond, setBond] = useState(null);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
+  const [witnessing, setWitnessing] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const [tick, setTick] = useState(0);
   const myPid = getMyParticipantId(id);
   const [prevStatus, setPrevStatus] = useState(null);
@@ -152,6 +154,82 @@ export default function BondDashboard() {
     }
   };
 
+  const alreadyWitnessing = isWitnessing(id);
+
+  const witness = async () => {
+    if (!session?.displayName) {
+      toast.error("Sign your mark first", { description: "Return to the entry hall and pick your role." });
+      nav("/");
+      return;
+    }
+    if (alreadyWitnessing) {
+      toast.info("You're already witnessing this bond.");
+      return;
+    }
+    try {
+      setWitnessing(true);
+      unlockAudio();
+      const b = await api.witnessBond(id, {
+        display_name: session.displayName,
+        color: session.color || "#1F6B4E",
+      });
+      markWitnessed(id);
+      sfx.pledgeIn();
+      setBond(b);
+      toast.success("You're now witnessing.", { description: "We'll notify you when proof is submitted or the bond releases." });
+    } catch (e) {
+      toast.error("Could not witness", { description: e?.response?.data?.detail || e.message });
+    } finally {
+      setWitnessing(false);
+    }
+  };
+
+  const shareNative = async () => {
+    const url = window.location.href;
+    const cardUrl = api.bondCardUrl(id);
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: bond.title,
+          text: `Witness this pledge: ${bond.title}`,
+          url,
+        });
+      } catch {
+        // user cancelled — silent
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copied to clipboard");
+      } catch {
+        toast.error("Could not copy link");
+      }
+    }
+  };
+
+  const downloadCard = async () => {
+    try {
+      const cardUrl = api.bondCardUrl(id);
+      const a = document.createElement("a");
+      a.href = cardUrl;
+      a.download = `pledgebond-${(bond.title || "bond").slice(0, 20).replace(/\s+/g, "-").toLowerCase()}.png`;
+      a.target = "_blank";
+      a.click();
+      toast.success("Share card opened — save the image to post it.");
+    } catch {
+      toast.error("Could not open card");
+    }
+  };
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("Link copied to clipboard");
+    } catch {
+      toast.error("Could not copy");
+    }
+  };
+
   if (loading) return <AppShell><div className="pt-10 text-center font-ui text-ink-500">Fetching the ledger...</div></AppShell>;
   if (!bond) return <AppShell><div className="pt-10 text-center font-ui text-ink-500">Bond not found.</div></AppShell>;
 
@@ -159,10 +237,20 @@ export default function BondDashboard() {
     <AppShell showBack backTo="/explore">
       {/* Header */}
       <div className="pt-3">
-        <div className="flex items-center gap-2 text-[11px] font-ui uppercase tracking-widest text-ink-500">
-          <span>{bond.category === "corporate" ? "Corporate Program" : "Individual Challenge"}</span>
-          <span>·</span>
-          <span>Bond #{bond.id.slice(0, 6)}</span>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-[11px] font-ui uppercase tracking-widest text-ink-500 min-w-0">
+            <span className="truncate">{bond.category === "corporate" ? "Corporate Program" : "Individual Challenge"}</span>
+            <span>·</span>
+            <span>Bond #{bond.id.slice(0, 6)}</span>
+          </div>
+          <button
+            onClick={() => setShowShare(true)}
+            className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-parchment-300 text-ink-700 hover:bg-parchment-200 transition-colors"
+            data-testid="bond-share-button"
+            aria-label="Share this bond"
+          >
+            <Share2 size={16} />
+          </button>
         </div>
         <h1 className="font-serif-display text-[28px] tracking-serif-tight text-ink leading-tight">{bond.title}</h1>
         <p className="font-serif-display italic text-[14px] text-ink-600 mt-1">In benefit of — <span className="not-italic text-ink">{bond.cause_name}</span></p>
@@ -208,6 +296,38 @@ export default function BondDashboard() {
           <MetaBox label="Pool" value={`$${totalPledged.toLocaleString()} / $${bond.activation_threshold.toLocaleString()}`} />
           <MetaBox label={bond.status === "pending" ? "Time to seal" : "Time remaining"} value={cdText} />
         </div>
+
+        {/* Witness strip — zero-friction observers */}
+        {(bond.status === "pending" || bond.status === "active") && (
+          <div className="mt-4 w-full ornate-frame p-3 flex items-center gap-3">
+            <div className="shrink-0 w-10 h-10 rounded-full bg-emerald-800/10 border border-emerald-800/30 flex items-center justify-center text-emerald-800">
+              <Eye size={18} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-serif-display text-[15px] text-ink leading-tight">
+                {bond.witnesses?.length || 0} {bond.witnesses?.length === 1 ? "witness" : "witnesses"} watching
+              </div>
+              <div className="font-ui text-[11px] text-ink-500">
+                {alreadyWitnessing ? "You're witnessing — we'll notify you on updates." : "Watch without pledging. Get notified on proof + release."}
+              </div>
+            </div>
+            {!alreadyJoined && !alreadyWitnessing && (
+              <button
+                onClick={witness}
+                disabled={witnessing}
+                data-testid="bond-witness-button"
+                className="shrink-0 px-3 py-2 text-[12px] font-ui border border-emerald-800 text-emerald-800 hover:bg-emerald-800 hover:text-parchment transition-colors disabled:opacity-50"
+              >
+                {witnessing ? "..." : "Witness"}
+              </button>
+            )}
+            {alreadyWitnessing && (
+              <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-ui text-emerald-800" data-testid="bond-witnessing-badge">
+                <Check size={12} /> Witnessing
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Description */}
@@ -316,6 +436,72 @@ export default function BondDashboard() {
           )}
         </div>
       </div>
+
+      {/* Share modal */}
+      <AnimatePresence>
+        {showShare && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="absolute inset-0 bg-ink/40" onClick={() => setShowShare(false)} />
+            <motion.div
+              className="relative bg-parchment-50 border border-parchment-300 rounded-lg shadow-2xl w-full max-w-[400px] overflow-hidden"
+              initial={{ scale: 0.92, y: 12 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.92, y: 12 }}
+              transition={{ type: "spring", damping: 26, stiffness: 300 }}
+            >
+              <div className="flex items-center justify-between px-4 py-3 border-b border-parchment-300">
+                <div className="font-serif-display text-[20px] text-ink">Share this bond</div>
+                <button onClick={() => setShowShare(false)} className="text-ink-500 hover:text-ink" aria-label="Close">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="p-4">
+                {/* OG card preview */}
+                <div className="ornate-frame p-2 mb-4">
+                  <img
+                    src={api.bondCardUrl(id)}
+                    alt={`${bond.title} share card`}
+                    className="w-full h-auto rounded"
+                    data-testid="bond-share-card-preview"
+                    onError={(e) => { e.target.style.display = "none"; }}
+                  />
+                </div>
+                <p className="font-ui text-[12px] text-ink-600 mb-3">
+                  Share the sealed scroll card on socials, or copy the link to invite witnesses.
+                </p>
+                <div className="space-y-2">
+                  <button
+                    onClick={shareNative}
+                    className="w-full ribbon-btn ribbon-btn-gold text-[13px]"
+                    data-testid="bond-share-native-button"
+                  >
+                    <Share2 size={14} className="inline mr-1" /> Share link
+                  </button>
+                  <button
+                    onClick={downloadCard}
+                    className="w-full px-4 py-2.5 border border-ink text-ink font-ui text-[13px] hover:bg-ink hover:text-parchment transition-colors"
+                    data-testid="bond-share-download-button"
+                  >
+                    <Download size={14} className="inline mr-1" /> Download share card
+                  </button>
+                  <button
+                    onClick={copyLink}
+                    className="w-full px-4 py-2.5 border border-parchment-300 text-ink-600 font-ui text-[13px] hover:bg-parchment-200 transition-colors"
+                    data-testid="bond-share-copy-button"
+                  >
+                    <Copy size={14} className="inline mr-1" /> Copy link
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AppShell>
   );
 }

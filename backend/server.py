@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Response
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -30,8 +30,10 @@ FEATURES = {
     "auth": _flag("ENABLE_AUTH"),
     "payments": _flag("ENABLE_PAYMENTS"),
     "websockets": _flag("ENABLE_WEBSOCKETS"),
-    "referrals": _flag("ENABLE_REFERRALS"),
-    "leaderboards": _flag("ENABLE_LEADERBOARDS"),
+    # Referrals + leaderboards default ON for the contest build — they're the
+    # viral + engagement hooks. Flip off via ENABLE_REFERRALS=0 if needed.
+    "referrals": _flag("ENABLE_REFERRALS", "1"),
+    "leaderboards": _flag("ENABLE_LEADERBOARDS", "1"),
     "templates": _flag("ENABLE_TEMPLATES"),
     "storage": _flag("ENABLE_STORAGE"),
 }
@@ -98,6 +100,30 @@ class Proof(BaseModel):
     submitted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
+class Witness(BaseModel):
+    """Zero-friction observer — no pledge required. The viral-growth tier."""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    display_name: str
+    initials: str = ""
+    color: str = "#1F6B4E"
+    joined_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class Notification(BaseModel):
+    """In-app notification. Keyed by demo session name (or user id when auth on)."""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    owner_key: str  # demo display name or user id — who this notification is for
+    bond_id: str
+    bond_title: str = ""
+    kind: Literal[
+        "witness_joined", "proof_submitted", "bond_activated",
+        "bond_released", "bond_failed", "deadline_24h", "deadline_1h"
+    ]
+    message: str
+    read: bool = False
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
 class PledgeBond(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -115,6 +141,7 @@ class PledgeBond(BaseModel):
     status: Literal["draft", "pending", "active", "failed", "released"] = "pending"
     task_requirements: List[TaskRequirement] = []
     participants: List[Participant] = []
+    witnesses: List[Witness] = []
     proofs: List[Proof] = []
     payout_split: List[PayoutPocket] = []
     completion_target_percent: int = 70  # % of participants that must complete all tasks
@@ -145,6 +172,11 @@ class PledgeBondCreate(BaseModel):
 class JoinRequest(BaseModel):
     display_name: str
     color: Optional[str] = "#7B1730"
+
+
+class WitnessRequest(BaseModel):
+    display_name: str
+    color: Optional[str] = "#1F6B4E"
 
 
 class ProofSubmit(BaseModel):
@@ -221,6 +253,46 @@ def _clean(bond: dict) -> dict:
     if "_id" in bond:
         bond.pop("_id")
     return bond
+
+
+# ==================== NOTIFICATIONS ====================
+
+async def _notify(bond: dict, kind: str, message: str, owner_key: str):
+    """Create a notification for a specific owner (demo name or user id)."""
+    try:
+        notif = Notification(
+            owner_key=owner_key,
+            bond_id=bond["id"],
+            bond_title=bond.get("title", ""),
+            kind=kind,
+            message=message,
+        )
+        await db.notifications.insert_one(notif.model_dump())
+    except Exception as e:
+        logging.getLogger(__name__).warning("notify failed: %s", e)
+
+
+async def _notify_bond_actor(bond: dict, kind: str, message: str, actor_name: str):
+    """Notify the bond's funder_name (creator) about an event from actor_name."""
+    creator = (bond.get("funder_name") or "").strip()
+    if creator and creator.lower() != (actor_name or "").lower():
+        await _notify(bond, kind, message, creator)
+
+
+async def _notify_witnesses(bond: dict, kind: str, message: str, exclude_name: str = ""):
+    """Notify all witnesses of a bond event."""
+    for w in bond.get("witnesses", []):
+        name = (w.get("display_name") or "").strip()
+        if name and name.lower() != (exclude_name or "").lower():
+            await _notify(bond, kind, message, name)
+
+
+async def _notify_participants(bond: dict, kind: str, message: str, exclude_name: str = ""):
+    """Notify all participants of a bond event."""
+    for p in bond.get("participants", []):
+        name = (p.get("display_name") or "").strip()
+        if name and name.lower() != (exclude_name or "").lower():
+            await _notify(bond, kind, message, name)
 
 
 # ==================== ENDPOINTS ====================
@@ -322,6 +394,9 @@ async def join_bond(bond_id: str, req: JoinRequest):
     if bond["status"] == "pending" and total_pledged >= bond["activation_threshold"]:
         bond["status"] = "active"
         await emit_bond_event(bond_id, "bond_activated", {"bond_id": bond_id})
+        btitle = bond["title"]
+        await _notify_witnesses(bond, "bond_activated", f'"{btitle}" is now sealed and active!')
+        await _notify_participants(bond, "bond_activated", f'"{btitle}" is now sealed and active!', exclude_name=req.display_name)
 
     await _persist(bond)
     await emit_bond_event(bond_id, "participant_joined", {
@@ -329,6 +404,40 @@ async def join_bond(bond_id: str, req: JoinRequest):
         "participant": participant.model_dump(),
         "total_participants": len(bond["participants"]),
     })
+    # Notify the bond creator that someone joined
+    btitle = bond["title"]
+    pledge_amt = bond["fundee_pledge_amount"]
+    await _notify_bond_actor(bond, "witness_joined", f"{req.display_name} pledged ${pledge_amt} to \"{btitle}\"", req.display_name)
+    return bond
+
+
+@api_router.post("/bonds/{bond_id}/witness", response_model=PledgeBond)
+async def witness_bond(bond_id: str, req: WitnessRequest):
+    """Zero-friction witness tier — no pledge required. The viral-growth entry point."""
+    bond = await db.bonds.find_one({"id": bond_id}, {"_id": 0})
+    if not bond:
+        raise HTTPException(404, "Bond not found")
+    if bond["status"] not in ("pending", "active"):
+        raise HTTPException(400, f"Cannot witness a {bond['status']} bond")
+    # Prevent duplicate witness by display name
+    existing = [w for w in bond.get("witnesses", []) if (w.get("display_name") or "").lower() == req.display_name.lower()]
+    if existing:
+        return bond  # idempotent — already witnessing
+
+    witness = Witness(
+        display_name=req.display_name,
+        initials=_initials(req.display_name),
+        color=req.color or "#1F6B4E",
+    )
+    bond.setdefault("witnesses", []).append(witness.model_dump())
+    await _persist(bond)
+    await emit_bond_event(bond_id, "witness_joined", {
+        "bond_id": bond_id,
+        "witness": witness.model_dump(),
+        "total_witnesses": len(bond["witnesses"]),
+    })
+    btitle = bond["title"]
+    await _notify_bond_actor(bond, "witness_joined", f'{req.display_name} is now witnessing "{btitle}"', req.display_name)
     return bond
 
 
@@ -376,6 +485,13 @@ async def submit_proof(bond_id: str, req: ProofSubmit):
         "task_id": req.task_id,
         "proof": proof.model_dump(),
     })
+    # Notify creator + witnesses that proof was submitted
+    actor_name = participant.get("display_name", "Someone")
+    task_title = task.get("title", "a clause")
+    btitle = bond["title"]
+    proof_msg = f'{actor_name} logged proof for "{task_title}" on "{btitle}"'
+    await _notify_bond_actor(bond, "proof_submitted", proof_msg, actor_name)
+    await _notify_witnesses(bond, "proof_submitted", proof_msg, exclude_name=actor_name)
     return bond
 
 
@@ -387,12 +503,21 @@ async def release_bond(bond_id: str):
         raise HTTPException(404, "Bond not found")
     if bond["status"] != "active":
         raise HTTPException(400, f"Bond is {bond['status']}, cannot release now")
+    btitle = bond["title"]
     if _completion_met(bond):
         bond["status"] = "released"
         await emit_bond_event(bond_id, "bond_released", {"bond_id": bond_id})
+        release_msg = f'"{btitle}" was released — the vault is open!'
+        await _notify_witnesses(bond, "bond_released", release_msg)
+        await _notify_participants(bond, "bond_released", release_msg)
+        await _notify_bond_actor(bond, "bond_released", release_msg, "")
     else:
         bond["status"] = "failed"
         await emit_bond_event(bond_id, "bond_failed", {"bond_id": bond_id})
+        fail_msg = f'"{btitle}" was broken — the bond failed.'
+        await _notify_witnesses(bond, "bond_failed", fail_msg)
+        await _notify_participants(bond, "bond_failed", fail_msg)
+        await _notify_bond_actor(bond, "bond_failed", fail_msg, "")
     await _persist(bond)
     return bond
 
@@ -414,6 +539,176 @@ async def reset_bond(bond_id: str):
 async def delete_bond(bond_id: str):
     res = await db.bonds.delete_one({"id": bond_id})
     return {"deleted": res.deleted_count}
+
+
+# ==================== NOTIFICATIONS ENDPOINTS ====================
+
+@api_router.get("/notifications")
+async def list_notifications(owner: str, limit: int = 50):
+    """Get notifications for a demo session name (or user id when auth on)."""
+    if not owner:
+        raise HTTPException(400, "owner query param required")
+    notifs = await db.notifications.find(
+        {"owner_key": owner}, {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    return notifs
+
+
+@api_router.post("/notifications/read")
+async def mark_notifications_read(owner: str, ids: Optional[str] = None):
+    """Mark notifications as read. If ids omitted, marks all for the owner."""
+    if not owner:
+        raise HTTPException(400, "owner query param required")
+    query = {"owner_key": owner}
+    if ids:
+        id_list = [i.strip() for i in ids.split(",") if i.strip()]
+        query["id"] = {"$in": id_list}
+    await db.notifications.update_many(query, {"$set": {"read": True}})
+    return {"updated": True}
+
+
+@api_router.get("/notifications/unread-count")
+async def unread_count(owner: str):
+    """Quick poll for the bell badge."""
+    if not owner:
+        raise HTTPException(400, "owner query param required")
+    count = await db.notifications.count_documents({"owner_key": owner, "read": False})
+    return {"count": count}
+
+
+# ==================== PROOF FEED ====================
+
+@api_router.get("/proofs")
+async def proof_feed(limit: int = 50):
+    """Cross-bond feed of recent proof submissions — the 'content' that makes
+    browsing addictive. Returns enriched proof records with bond context."""
+    bonds = await db.bonds.find({"proofs.0": {"$exists": True}}, {"_id": 0}).to_list(200)
+    items = []
+    for b in bonds:
+        for p in b.get("proofs", []):
+            # find participant name
+            part = next((pp for pp in b.get("participants", []) if pp["id"] == p["participant_id"]), None)
+            task = next((t for t in b.get("task_requirements", []) if t["id"] == p["task_id"]), None)
+            items.append({
+                "id": p["id"],
+                "bond_id": b["id"],
+                "bond_title": b.get("title", ""),
+                "seal_style": b.get("seal_style", "burgundy"),
+                "bond_status": b.get("status", "pending"),
+                "participant_id": p["participant_id"],
+                "participant_name": part.get("display_name", "") if part else "",
+                "participant_color": part.get("color", "#7B1730") if part else "#7B1730",
+                "participant_initials": part.get("initials", "?") if part else "?",
+                "task_id": p["task_id"],
+                "task_title": task.get("title", "") if task else "",
+                "kind": p.get("kind", "self"),
+                "note": p.get("note", ""),
+                "numeric_value": p.get("numeric_value"),
+                "submitted_at": p.get("submitted_at", ""),
+                "cause_name": b.get("cause_name", ""),
+                "funder_amount": b.get("funder_amount", 0),
+            })
+    items.sort(key=lambda x: x["submitted_at"], reverse=True)
+    return items[:limit]
+
+
+# ==================== DEADLINE SWEEP ====================
+
+async def _deadline_sweep():
+    """Generate deadline-approaching notifications for bonds near their deadline.
+    Called on startup and periodically. Idempotent — won't spam duplicates."""
+    now = datetime.now(timezone.utc)
+    bonds = await db.bonds.find({"status": {"$in": ["pending", "active"]}}, {"_id": 0}).to_list(500)
+    for b in bonds:
+        try:
+            deadline = datetime.fromisoformat(b["deadline"].replace("Z", "+00:00"))
+        except Exception:
+            continue
+        remaining = deadline - now
+        hours_left = remaining.total_seconds() / 3600
+        btitle = b["title"]
+        # 24h warning
+        if 0 < hours_left <= 24:
+            # check if we already sent a 24h notification
+            existing = await db.notifications.find_one({
+                "bond_id": b["id"], "kind": "deadline_24h"
+            })
+            if not existing:
+                msg = f'"{btitle}" — less than 24 hours until the deadline!'
+                await _notify_witnesses(b, "deadline_24h", msg)
+                await _notify_participants(b, "deadline_24h", msg)
+                await _notify_bond_actor(b, "deadline_24h", msg, "")
+        # 1h warning
+        if 0 < hours_left <= 1:
+            existing = await db.notifications.find_one({
+                "bond_id": b["id"], "kind": "deadline_1h"
+            })
+            if not existing:
+                msg = f'"{btitle}" — less than 1 hour until the deadline!'
+                await _notify_witnesses(b, "deadline_1h", msg)
+                await _notify_participants(b, "deadline_1h", msg)
+                await _notify_bond_actor(b, "deadline_1h", msg, "")
+
+
+# ==================== OG CARD ENDPOINTS ====================
+
+@api_router.get("/bonds/{bond_id}/card.png")
+async def get_bond_card_png(bond_id: str):
+    """Generate and return a shareable OG card PNG for a bond."""
+    bond = await db.bonds.find_one({"id": bond_id}, {"_id": 0})
+    if not bond:
+        raise HTTPException(404, "Bond not found")
+    # Lazy status update
+    new_status = _compute_status(bond)
+    if new_status != bond["status"]:
+        bond["status"] = new_status
+        await _persist(bond)
+    try:
+        from og_cards import render_bond_card
+        png_bytes = render_bond_card(bond)
+        return Response(content=png_bytes, media_type="image/png", headers={
+            "Cache-Control": "public, max-age=300",
+        })
+    except Exception as e:
+        logger.warning("OG card render failed: %s", e)
+        raise HTTPException(500, "Could not render card")
+
+
+@api_router.get("/bonds/{bond_id}/og")
+async def get_bond_og_meta(bond_id: str):
+    """Return OG metadata for a bond — used for dynamic meta tag injection."""
+    bond = await db.bonds.find_one({"id": bond_id}, {"_id": 0})
+    if not bond:
+        raise HTTPException(404, "Bond not found")
+    new_status = _compute_status(bond)
+    if new_status != bond["status"]:
+        bond["status"] = new_status
+        await _persist(bond)
+    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+    card_url = f"{frontend_url}/api/bonds/{bond_id}/card.png"
+    bond_url = f"{frontend_url}/bond/{bond_id}"
+    title = bond.get("title", "Pledgebond")
+    description = bond.get("description", "A pledge is a sealed contract.")
+    cause = bond.get("cause_name", "")
+    og_description = f"{description}"
+    if cause:
+        og_description += f" In benefit of {cause}."
+    participant_count = len(bond.get("participants", []))
+    witness_count = len(bond.get("witnesses", []))
+    og_description += f" {participant_count} pledged, {witness_count} witnessing."
+    return {
+        "og:title": f"{title} — Pledgebond",
+        "og:description": og_description,
+        "og:image": card_url,
+        "og:url": bond_url,
+        "og:type": "website",
+        "og:image:width": 1200,
+        "og:image:height": 630,
+        "twitter:card": "summary_large_image",
+        "twitter:title": f"{title} — Pledgebond",
+        "twitter:description": og_description,
+        "twitter:image": card_url,
+    }
 
 
 # ==================== SEED ====================
@@ -564,7 +859,33 @@ async def _seed_bonds():
     ).model_dump()
     await db.bonds.insert_one(b4)
 
-    logger.info("Seeded 4 demo bonds.")
+    # Bond 5 — CONTEST BOND: self-referential "ship my contest entry" pledge
+    b5 = PledgeBond(
+        title="Ship My Contest Entry by Deadline",
+        description="I pledge to ship and submit my Fabrizio Romano x Emergent Builder's Contest entry before the deadline. Witnesses hold me accountable — no last-minute excuses.",
+        category="individual",
+        cause_name="Builder's Contest $100K Prize Pool",
+        cause_link="",
+        funder_name="Contest Builder",
+        funder_amount=1000,
+        activation_threshold=200,
+        fundee_pledge_amount=10,
+        deadline=(now + timedelta(days=5)).isoformat(),
+        status="pending",
+        task_requirements=_mk_tasks([
+            {"title": "Submit entry to contest page", "task_type": "binary", "verification": "self_report"},
+            {"title": "Share entry link with 3 friends", "task_type": "binary", "verification": "self_report"},
+            {"title": "Screenshot live submission", "task_type": "binary", "verification": "photo_upload"},
+        ]),
+        participants=_mk_participants(["Builder A.", "Dev B.", "Maker C."]),
+        payout_split=_mk_split([("Prize Celebration", 70), ("Next Project Fund", 25), ("Platform Fee", 5)]),
+        completion_target_percent=70,
+        seal_style="gold",
+        cover_emoji="\U0001F3C6",  # trophy
+    ).model_dump()
+    await db.bonds.insert_one(b5)
+
+    logger.info("Seeded 5 demo bonds (incl. contest bond).")
 
 
 app.include_router(api_router)
@@ -636,10 +957,29 @@ async def on_startup():
             except Exception as e:
                 logger.warning("template setup: %s", e)
         await _seed_bonds()
+        # Run deadline sweep on startup so near-deadline bonds get notifications
+        try:
+            await _deadline_sweep()
+        except Exception as e:
+            logger.warning("deadline sweep on startup: %s", e)
         enabled = [k for k, v in FEATURES.items() if v]
         logger.info("Pledgebond ready. Enabled features: %s", enabled or ["(none \u2014 demo mode)"])
     except Exception as e:
         logger.exception("Startup failed: %s", e)
+
+
+@app.on_event("startup")
+async def _start_deadline_sweep_loop():
+    """Periodic deadline sweep — every 10 minutes."""
+    import asyncio
+    async def _loop():
+        while True:
+            await asyncio.sleep(600)
+            try:
+                await _deadline_sweep()
+            except Exception as e:
+                logger.warning("deadline sweep: %s", e)
+    asyncio.create_task(_loop())
 
 
 @app.on_event("shutdown")

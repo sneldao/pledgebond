@@ -7,6 +7,7 @@ import WaxStamp from "@/components/WaxStamp";
 import { setSession, getSession } from "@/lib/session";
 import { unlockAudio } from "@/lib/sound";
 import { toast } from "sonner";
+import { Trophy } from "lucide-react";
 
 const ROLES = [
   { key: "funder", label: "Funder", sub: "I stake the seed pledge", color: "#7B1730" },
@@ -135,6 +136,25 @@ export default function Landing() {
         </div>
 
         <div className="mt-10 torn-divider" />
+
+        {/* Contest CTA */}
+        <div className="mt-6 ornate-frame p-4 text-center" data-testid="landing-contest-cta">
+          <WaxStamp variant="gold" className="text-[9px] mb-2">BUILDER'S CONTEST</WaxStamp>
+          <div className="font-serif-display text-[18px] text-ink leading-tight">
+            Pledge to ship your contest entry.
+          </div>
+          <p className="font-ui text-[12px] text-ink-600 mt-1">
+            Join the self-referential bond — witnesses hold you accountable to your deadline.
+          </p>
+          <button
+            onClick={() => nav("/create?template=contest")}
+            className="mt-3 ribbon-btn ribbon-btn-gold text-[13px]"
+            data-testid="landing-contest-cta-button"
+          >
+            <span className="inline-flex items-center gap-1"><Trophy size={14} /> Draft a Contest Bond</span>
+          </button>
+        </div>
+
         <p className="mt-4 font-ui text-[11px] text-ink-500 text-center">
           Pledgebond is a demo ledger. No real payments are processed.
         </p>

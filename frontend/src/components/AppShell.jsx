@@ -4,6 +4,7 @@ import { getSession, clearSession } from "@/lib/session";
 import { isMuted, setMuted, unlockAudio } from "@/lib/sound";
 import { Volume2, VolumeX, ChevronLeft, Compass } from "lucide-react";
 import { useEffect, useState } from "react";
+import { NotificationsBell } from "@/components/NotificationsBell";
 
 export const AppShell = ({ children, showBack = false, backTo = null, title = "", right = null }) => {
   const nav = useNavigate();
@@ -49,6 +50,7 @@ export const AppShell = ({ children, showBack = false, backTo = null, title = ""
           </div>
           <div className="flex items-center gap-2">
             {right}
+            <NotificationsBell />
             <button
               onClick={toggleMute}
               className="w-9 h-9 flex items-center justify-center rounded-full border border-parchment-300 text-ink-700 hover:bg-parchment-200 transition-colors"
