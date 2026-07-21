@@ -159,6 +159,7 @@ function BondRow({ bond, onOpen, index }) {
           size={82}
           style={bond.seal_style || "burgundy"}
           showTension={false}
+          hidePill
         />
       </div>
       <div className="flex-1 min-w-0">

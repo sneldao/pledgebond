@@ -447,7 +447,7 @@ function SealStep({ form, set }) {
             data-testid={`create-seal-style-${s.k}`}
             className={`p-3 border ${form.seal_style === s.k ? "border-ink bg-parchment-200" : "border-parchment-300"} flex flex-col items-center gap-2`}
           >
-            <VaultSeal status="pending" pledgeRatio={0.5} size={78} style={s.k} showTension={false} />
+            <VaultSeal status="pending" pledgeRatio={0.5} size={78} style={s.k} showTension={false} hidePill />
             <span className="font-serif-display text-[13px] text-ink">{s.label}</span>
           </button>
         ))}

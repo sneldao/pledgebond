@@ -60,7 +60,7 @@ export default function Landing() {
             animate={{ y: [0, -4, 0] }}
             transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
           >
-            <VaultSeal status="pending" pledgeRatio={0.55} size={260} style="burgundy" showTension={false} />
+            <VaultSeal status="pending" pledgeRatio={0.55} size={260} style="burgundy" showTension={false} hidePill />
           </motion.div>
         </div>
 

@@ -179,6 +179,7 @@ export default function BondDashboard() {
             size={320}
             style={bond.seal_style || "burgundy"}
             onLockComplete={() => {}}
+            hidePill
           />
           <OrbitAvatars
             participants={bond.participants || []}
@@ -186,6 +187,19 @@ export default function BondDashboard() {
             ringRadius={175}
             maxSlots={18}
           />
+        </div>
+
+        {/* Status stamp under the orbit ring \u2014 gives room to breathe */}
+        <div className="mt-10">
+          <WaxStamp
+            variant={bond.status === "released" ? "gold" : bond.status === "failed" ? "ink" : "burgundy"}
+            data-testid="bond-status-badge"
+          >
+            {bond.status === "pending" && "Awaiting Seal"}
+            {bond.status === "active" && "Sealed \u00B7 Active"}
+            {bond.status === "released" && "Bond Released"}
+            {bond.status === "failed" && "Bond Broken"}
+          </WaxStamp>
         </div>
 
         {/* Meta strip */}
