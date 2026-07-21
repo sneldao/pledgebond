@@ -267,7 +267,7 @@ export default function BondDashboard() {
       <div className="pt-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-[11px] font-ui uppercase tracking-widest text-ink-500 min-w-0">
-            <span className="truncate">{bond.category === "corporate" ? "Corporate Program" : "Individual Challenge"}</span>
+            <span className="truncate">{bond.category === "corporate" ? "Corporate Program" : bond.category === "football" ? "Football Pledge" : "Individual Challenge"}</span>
             <span>·</span>
             <span>Bond #{bond.id.slice(0, 6)}</span>
           </div>

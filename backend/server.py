@@ -130,7 +130,7 @@ class PledgeBond(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     title: str
     description: str = ""
-    category: Literal["individual", "corporate"] = "individual"
+    category: Literal["individual", "corporate", "football"] = "individual"
     cause_name: str = ""
     cause_link: Optional[str] = ""
     funder_name: str = ""
@@ -154,7 +154,7 @@ class PledgeBond(BaseModel):
 class PledgeBondCreate(BaseModel):
     title: str
     description: str = ""
-    category: Literal["individual", "corporate"] = "individual"
+    category: Literal["individual", "corporate", "football"] = "individual"
     cause_name: str = ""
     cause_link: Optional[str] = ""
     funder_name: str = ""
@@ -737,8 +737,35 @@ async def _seed_bonds():
             ).model_dump())
         return out
 
-    # Bond 1 — PENDING, half-filled seal (individual challenge)
+    # Bond 1 — FOOTBALL BOND: "HERE WE GO" — seal your football pledge (shown first)
     b1 = PledgeBond(
+        title="HERE WE GO: 30-Day Football Fitness Pledge",
+        description="Seal your vow like a transfer deal. Pledge to hit your fitness goal in 30 days — run 5K, hit the gym 3x/week, or beat your sprint time. Your crew witnesses it. Miss the deadline and everyone sees the L. HERE WE GO.",
+        category="football",
+        cause_name="Grassroots Football Academy",
+        cause_link="",
+        funder_name="Sunday League Captain",
+        funder_amount=2000,
+        activation_threshold=300,
+        fundee_pledge_amount=15,
+        deadline=(now + timedelta(days=30)).isoformat(),
+        status="pending",
+        task_requirements=_mk_tasks([
+            {"title": "Log first training session", "task_type": "binary", "verification": "self_report"},
+            {"title": "Weekly check-in (4 weeks)", "task_type": "binary", "verification": "self_report"},
+            {"title": "Upload 5K run time", "task_type": "timed_ranked", "verification": "numeric", "target": 1800, "unit": "sec"},
+            {"title": "Photo proof at finish line", "task_type": "binary", "verification": "photo_upload"},
+        ]),
+        participants=_mk_participants(["Marco R.", "Diego S.", "Luca B.", "Thiago M.", "Kofi A.", "Ravi N.", "Sam K.", "Jules T."]),
+        payout_split=_mk_split([("Grassroots Academy", 60), ("Kit Fund", 25), ("Top Finishers", 10), ("Platform Fee", 5)]),
+        completion_target_percent=70,
+        seal_style="burgundy",
+        cover_emoji="\u26BD",  # soccer ball
+    ).model_dump()
+    await db.bonds.insert_one(b1)
+
+    # Bond 2 — PENDING, half-filled seal (individual challenge)
+    b2 = PledgeBond(
         title="5-Hour Hula Hoop Endurance",
         description="Community endurance challenge: keep the hoop up for a full 5-hour window on livestream. Every ring drop resets your timer.",
         category="individual",
@@ -885,34 +912,7 @@ async def _seed_bonds():
     ).model_dump()
     await db.bonds.insert_one(b5)
 
-    # Bond 6 — FOOTBALL BOND: "HERE WE GO" — seal your football pledge
-    b6 = PledgeBond(
-        title="HERE WE GO: 30-Day Football Fitness Pledge",
-        description="Seal your vow like a transfer deal. Pledge to hit your fitness goal in 30 days — run 5K, hit the gym 3x/week, or beat your sprint time. Your crew witnesses it. Miss the deadline and everyone sees the L. HERE WE GO.",
-        category="individual",
-        cause_name="Grassroots Football Academy",
-        cause_link="",
-        funder_name="Sunday League Captain",
-        funder_amount=2000,
-        activation_threshold=300,
-        fundee_pledge_amount=15,
-        deadline=(now + timedelta(days=30)).isoformat(),
-        status="pending",
-        task_requirements=_mk_tasks([
-            {"title": "Log first training session", "task_type": "binary", "verification": "self_report"},
-            {"title": "Weekly check-in (4 weeks)", "task_type": "binary", "verification": "self_report"},
-            {"title": "Upload 5K run time", "task_type": "timed_ranked", "verification": "numeric", "target": 1800, "unit": "sec"},
-            {"title": "Photo proof at finish line", "task_type": "binary", "verification": "photo_upload"},
-        ]),
-        participants=_mk_participants(["Marco R.", "Diego S.", "Luca B.", "Thiago M.", "Kofi A.", "Ravi N.", "Sam K.", "Jules T."]),
-        payout_split=_mk_split([("Grassroots Academy", 60), ("Kit Fund", 25), ("Top Finishers", 10), ("Platform Fee", 5)]),
-        completion_target_percent=70,
-        seal_style="burgundy",
-        cover_emoji="\u26BD",  # soccer ball
-    ).model_dump()
-    await db.bonds.insert_one(b6)
-
-    logger.info("Seeded 6 demo bonds (incl. contest + football bonds).")
+    logger.info("Seeded 6 demo bonds (incl. football + contest bonds).")
 
 
 app.include_router(api_router)

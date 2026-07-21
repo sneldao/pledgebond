@@ -55,6 +55,7 @@ const CONTEST_TEMPLATE = {
 // Football template — "HERE WE GO" themed pledge for football fans
 const FOOTBALL_TEMPLATE = {
   title: "HERE WE GO: My Football Pledge",
+  category: "football",
   description: "Seal your vow like a transfer deal. Pledge to hit your football goal — fitness, skills, watch every match, or coach your kid's team. Your crew witnesses it. Miss the deadline and everyone sees the L. HERE WE GO.",
   cause_name: "Grassroots Football Academy",
   funder_amount: 2000,
@@ -291,6 +292,7 @@ function BasicsStep({ form, set }) {
             {[
               { k: "individual", label: "Individual" },
               { k: "corporate", label: "Corporate" },
+              { k: "football", label: "\u26BD Football" },
             ].map((o) => (
               <button
                 key={o.k}

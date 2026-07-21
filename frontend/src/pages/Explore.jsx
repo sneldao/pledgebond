@@ -58,7 +58,11 @@ export default function Explore() {
     })();
   }, []);
 
-  const filtered = bonds.filter((b) => (filter === "all" ? true : b.status === filter));
+  const filtered = bonds.filter((b) => {
+    if (filter === "all") return true;
+    if (filter === "football") return b.category === "football";
+    return b.status === filter;
+  });
 
   return (
     <AppShell>
@@ -71,7 +75,7 @@ export default function Explore() {
             </p>
             <h1 className="font-serif-display text-[32px] leading-[1.05] tracking-serif-tight text-ink">Open Bonds</h1>
             <p className="font-serif-display italic text-[14px] text-ink-600 mt-1">
-              Contracts of tension, awaiting hands.
+              {"HERE WE GO. Contracts of tension, awaiting hands."}
             </p>
           </div>
           <button
@@ -118,6 +122,7 @@ export default function Explore() {
             <div className="mt-4 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
               {[
                 { k: "all", label: "All" },
+                { k: "football", label: "\u26BD Football" },
                 { k: "pending", label: "Awaiting seal" },
                 { k: "active", label: "Sealed \u00B7 Active" },
                 { k: "released", label: "Released" },
@@ -268,7 +273,10 @@ function BondRow({ bond, onOpen, index }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-serif-display text-[19px] text-ink leading-tight truncate">{bond.title}</h3>
+          <h3 className="font-serif-display text-[19px] text-ink leading-tight truncate">
+            {bond.category === "football" && <span className="mr-1">{"\u26BD"}</span>}
+            {bond.title}
+          </h3>
           <WaxStamp
             variant={bond.status === "released" ? "gold" : bond.status === "failed" ? "ink" : "burgundy"}
             className="shrink-0"
