@@ -1,54 +1,50 @@
 import { useEffect } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
-import { HOME } from "@/constants/testIds";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "@/components/ui/sonner";
+import Landing from "@/pages/Landing";
+import Explore from "@/pages/Explore";
+import CreateBond from "@/pages/CreateBond";
+import BondDashboard from "@/pages/BondDashboard";
+import ProofSubmission from "@/pages/ProofSubmission";
+import ReleaseScreen from "@/pages/ReleaseScreen";
+import { getSession } from "@/lib/session";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
-
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          data-testid={HOME.emergentLink}
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
+function Redirector() {
+  const session = getSession();
+  return <Navigate to={session ? "/explore" : "/"} replace />;
+}
 
 function App() {
+  useEffect(() => {
+    // Set page title
+    document.title = "Pledgebond \u2014 A pledge is a sealed contract";
+  }, []);
+
   return (
     <div className="App">
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
+          <Route path="/" element={<Landing />} />
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/create" element={<CreateBond />} />
+          <Route path="/bond/:id" element={<BondDashboard />} />
+          <Route path="/bond/:id/proof/:taskId" element={<ProofSubmission />} />
+          <Route path="/bond/:id/release" element={<ReleaseScreen />} />
+          <Route path="*" element={<Redirector />} />
         </Routes>
       </BrowserRouter>
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: "#1C191C",
+            color: "#F2E2A6",
+            border: "1px solid #C49A3A",
+            fontFamily: "DM Sans, sans-serif",
+          },
+        }}
+      />
     </div>
   );
 }
