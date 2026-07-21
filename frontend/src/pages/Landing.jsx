@@ -60,7 +60,7 @@ export default function Landing() {
             animate={{ y: [0, -4, 0] }}
             transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
           >
-            <VaultSeal status="pending" pledgeRatio={0.55} size={260} style="burgundy" showTension={false} />
+            <VaultSeal status="pending" pledgeRatio={0.55} size={260} style="burgundy" showTension={false} hidePill />
           </motion.div>
         </div>
 
@@ -102,16 +102,18 @@ export default function Landing() {
 
         {/* Name input */}
         <div className="mt-8 space-y-2">
-          <label className="font-serif-display text-[16px] text-ink-700">Sign your mark</label>
+          <label htmlFor="display-name-input" className="font-serif-display text-[16px] text-ink-700">Sign your mark</label>
           <input
+            id="display-name-input"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Ada Lovelace"
             data-testid="landing-display-name-input"
+            aria-describedby="name-help"
             className="w-full px-4 py-3 bg-parchment-50 border-b-2 border-ink outline-none font-ui text-[16px] text-ink placeholder:text-ink-500/50 focus:border-wax transition-colors"
           />
-          <p className="font-ui text-[11px] text-ink-500">No account required. Your name is stored only on this device.</p>
+          <p id="name-help" className="font-ui text-[11px] text-ink-500">No account required. Your name is stored only on this device.</p>
         </div>
 
         <div className="mt-8 flex flex-col gap-3">

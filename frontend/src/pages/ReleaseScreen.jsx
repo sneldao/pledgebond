@@ -88,27 +88,69 @@ export default function ReleaseScreen() {
   }, [step, bond]);
 
   const shootCoins = () => {
-    const originY = 0.42;
-    const splits = bond?.payout_split || [];
-    // Emit coin bursts targeting each pocket zone in the bottom third
-    const nBursts = 6;
-    for (let i = 0; i < nBursts; i++) {
-      setTimeout(() => {
-        confetti({
-          particleCount: 40,
-          spread: 68,
-          startVelocity: 42,
-          gravity: 1.05,
-          scalar: 1.1,
-          angle: 90,
-          origin: { x: 0.5, y: originY },
-          colors: ["#E0C06A", "#C49A3A", "#8E6A1F", "#F2E2A6"],
-          shapes: ["circle", "square"],
-          disableForReducedMotion: true,
-        });
-      }, i * 100);
+    const sealEl = stageRef.current?.querySelector('[data-testid="vault-seal"]');
+    const sealRect = sealEl ? sealEl.getBoundingClientRect() : null;
+    // Seal center in viewport fractions (canvas-confetti origin is 0..1 of viewport)
+    const origin = sealRect
+      ? { x: (sealRect.left + sealRect.width / 2) / window.innerWidth, y: (sealRect.top + sealRect.height / 2) / window.innerHeight }
+      : { x: 0.5, y: 0.42 };
+
+    // Find each payout pocket in the DOM and aim a coin stream at it
+    const pocketEls = stageRef.current?.querySelectorAll('[data-testid^="payout-pocket-"]') || [];
+    const pockets = Array.from(pocketEls).map((el) => {
+      const r = el.getBoundingClientRect();
+      return {
+        x: (r.left + r.width / 2) / window.innerWidth,
+        y: (r.top + r.height / 2) / window.innerHeight,
+      };
+    });
+
+    const goldColors = ["#E0C06A", "#C49A3A", "#8E6A1F", "#F2E2A6"];
+
+    if (pockets.length === 0) {
+      // Fallback: centered burst if pockets aren't rendered yet
+      for (let i = 0; i < 6; i++) {
+        setTimeout(() => {
+          confetti({
+            particleCount: 40, spread: 68, startVelocity: 42, gravity: 1.05,
+            scalar: 1.1, angle: 90, origin, colors: goldColors,
+            shapes: ["circle", "square"], disableForReducedMotion: true,
+          });
+        }, i * 100);
+      }
+      return;
     }
-    // Later paper confetti (parchment-tinted)
+
+    // Direct a stream of coins from the seal toward each pocket
+    pockets.forEach((p, i) => {
+      const dx = p.x - origin.x;
+      const dy = p.y - origin.y;
+      // canvas-confetti angle: 0 = right, 90 = down
+      const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      // Velocity scaled to reach the pocket; gravity pulls them down into it
+      const velocity = Math.min(55, 30 + dist * 60);
+      const bursts = 4;
+      for (let b = 0; b < bursts; b++) {
+        setTimeout(() => {
+          confetti({
+            particleCount: 18,
+            spread: 28,
+            startVelocity: velocity,
+            gravity: 1.1,
+            scalar: 1.15,
+            angle,
+            origin,
+            colors: goldColors,
+            shapes: ["circle"],
+            ticks: 220,
+            disableForReducedMotion: true,
+          });
+        }, i * 120 + b * 90);
+      }
+    });
+
+    // Later paper confetti (parchment-tinted) — ambient celebration
     setTimeout(() => {
       confetti({
         particleCount: 90,

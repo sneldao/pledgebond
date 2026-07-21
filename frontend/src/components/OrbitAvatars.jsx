@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, memo } from "react";
 import { motion } from "framer-motion";
 
 /**
@@ -42,6 +42,8 @@ export const OrbitAvatars = ({
     <div
       className={`absolute inset-0 pointer-events-none ${className}`}
       style={{ width: centerSize, height: centerSize }}
+      role="group"
+      aria-label={`${participants.length} participants orbiting the vault seal`}
     >
       {slots.map(({ p, x, y }, idx) => (
         <motion.div
@@ -71,6 +73,8 @@ export const OrbitAvatars = ({
               boxShadow: "0 6px 14px rgba(28,25,28,0.28), inset 0 1px 0 rgba(255,255,255,0.35)",
             }}
             title={p.display_name}
+            role="img"
+            aria-label={`${p.display_name}, participant`}
           >
             {p.initials || p.display_name?.slice(0, 2)?.toUpperCase() || "?"}
           </div>
@@ -100,4 +104,4 @@ export const OrbitAvatars = ({
   );
 };
 
-export default OrbitAvatars;
+export default memo(OrbitAvatars);
