@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useMemo, useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import RibbonButton from "@/components/RibbonButton";
 import WaxStamp from "@/components/WaxStamp";
@@ -29,34 +29,76 @@ const STEPS = [
   { key: "seal", label: "Seal" },
 ];
 
+// Contest template — pre-fills the form for the self-referential contest bond
+const CONTEST_TEMPLATE = {
+  title: "Ship My Contest Entry by Deadline",
+  description: "I pledge to ship and submit my Fabrizio Romano x Emergent Builder's Contest entry before the deadline. Witnesses hold me accountable — no last-minute excuses.",
+  cause_name: "Builder's Contest $100K Prize Pool",
+  funder_amount: 1000,
+  activation_threshold: 200,
+  fundee_pledge_amount: 10,
+  completion_target_percent: 70,
+  seal_style: "gold",
+  cover_emoji: "\uD83C\uDFC6",
+  task_requirements: [
+    { id: crypto.randomUUID(), title: "Submit entry to contest page", task_type: "binary", verification: "self_report" },
+    { id: crypto.randomUUID(), title: "Share entry link with 3 friends", task_type: "binary", verification: "self_report" },
+    { id: crypto.randomUUID(), title: "Screenshot live submission", task_type: "binary", verification: "photo_upload" },
+  ],
+  payout_split: [
+    { label: "Prize Celebration", percent: 70 },
+    { label: "Next Project Fund", percent: 25 },
+    { label: "Platform Fee", percent: 5 },
+  ],
+};
+
 export default function CreateBond() {
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
   const session = getSession();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
 
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    category: "individual",
-    cause_name: "",
-    cause_link: "",
-    funder_name: session?.displayName || "",
-    funder_amount: 2500,
-    activation_threshold: 400,
-    fundee_pledge_amount: 25,
-    deadline: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 16),
-    completion_target_percent: 70,
-    seal_style: "burgundy",
-    task_requirements: [
-      { id: crypto.randomUUID(), title: "Log start time", task_type: "binary", verification: "self_report" },
-    ],
-    payout_split: [
-      { label: "Cause A", percent: 50 },
-      { label: "Cause B", percent: 25 },
-      { label: "Top 5", percent: 20 },
-      { label: "Platform Fee", percent: 5 },
-    ],
+  const [form, setForm] = useState(() => {
+    const base = {
+      title: "",
+      description: "",
+      category: "individual",
+      cause_name: "",
+      cause_link: "",
+      funder_name: session?.displayName || "",
+      funder_amount: 2500,
+      activation_threshold: 400,
+      fundee_pledge_amount: 25,
+      deadline: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 16),
+      completion_target_percent: 70,
+      seal_style: "burgundy",
+      task_requirements: [
+        { id: crypto.randomUUID(), title: "Log start time", task_type: "binary", verification: "self_report" },
+      ],
+      payout_split: [
+        { label: "Cause A", percent: 50 },
+        { label: "Cause B", percent: 25 },
+        { label: "Top 5", percent: 20 },
+        { label: "Platform Fee", percent: 5 },
+      ],
+    };
+    // Apply contest template if ?template=contest
+    if (searchParams.get("template") === "contest") {
+      Object.assign(base, CONTEST_TEMPLATE);
+    }
+    // Apply individual URL param overrides (allows deep-linking to pre-filled bonds)
+    const titleParam = searchParams.get("title");
+    if (titleParam) base.title = titleParam;
+    const descParam = searchParams.get("description");
+    if (descParam) base.description = descParam;
+    const causeParam = searchParams.get("cause");
+    if (causeParam) base.cause_name = causeParam;
+    const stakeParam = searchParams.get("stake");
+    if (stakeParam) base.funder_amount = Number(stakeParam);
+    const sealParam = searchParams.get("seal");
+    if (sealParam && ["burgundy", "gold", "emerald"].includes(sealParam)) base.seal_style = sealParam;
+    return base;
   });
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));

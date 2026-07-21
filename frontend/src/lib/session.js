@@ -45,6 +45,27 @@ export function getMyParticipantId(bondId) {
   return joinedBonds()[bondId]?.participantId || null;
 }
 
+// Witnessed bonds tracking (zero-friction tier)
+const WITNESS_KEY = "pledgebond.witnessed.v1";
+
+export function witnessedBonds() {
+  try {
+    return JSON.parse(localStorage.getItem(WITNESS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+export function markWitnessed(bondId) {
+  const w = witnessedBonds();
+  w[bondId] = { witnessedAt: new Date().toISOString() };
+  localStorage.setItem(WITNESS_KEY, JSON.stringify(w));
+}
+
+export function isWitnessing(bondId) {
+  return !!witnessedBonds()[bondId];
+}
+
 export function initials(name = "") {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return "?";

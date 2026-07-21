@@ -57,6 +57,37 @@ export const api = {
     const { data } = await client.delete(`/bonds/${id}`);
     return data;
   },
+  // Witness tier — zero-friction observer
+  witnessBond: async (id, body) => {
+    const { data } = await client.post(`/bonds/${id}/witness`, body);
+    return data;
+  },
+  // Notifications
+  notifications: {
+    list: async (owner) => {
+      const { data } = await client.get("/notifications", { params: { owner } });
+      return data;
+    },
+    markRead: async (owner, ids) => {
+      const { data } = await client.post("/notifications/read", null, { params: { owner, ids } });
+      return data;
+    },
+    unreadCount: async (owner) => {
+      const { data } = await client.get("/notifications/unread-count", { params: { owner } });
+      return data;
+    },
+  },
+  // Proof feed — cross-bond feed of recent proof submissions
+  proofFeed: async (limit = 50) => {
+    const { data } = await client.get("/proofs", { params: { limit } });
+    return data;
+  },
+  // OG card URL helper
+  bondCardUrl: (id) => `${API}/bonds/${id}/card.png`,
+  bondOgMeta: async (id) => {
+    const { data } = await client.get(`/bonds/${id}/og`);
+    return data;
+  },
   // Auth endpoints
   auth: {
     register: async (body) => {
