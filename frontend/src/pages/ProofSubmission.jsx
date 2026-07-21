@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import RibbonButton from "@/components/RibbonButton";
 import WaxStamp from "@/components/WaxStamp";
+import SealLoader from "@/components/SealLoader";
 import { api } from "@/lib/api";
 import { getMyParticipantId } from "@/lib/session";
 import { sfx } from "@/lib/sound";
@@ -72,7 +73,7 @@ export default function ProofSubmission() {
   };
 
   if (loading || !bond || !task) {
-    return <AppShell showBack><div className="pt-10 text-center font-ui text-ink-500">Fetching clause...</div></AppShell>;
+    return <AppShell showBack><SealLoader label="Unrolling the clause..." size={100} /></AppShell>;
   }
 
   return (

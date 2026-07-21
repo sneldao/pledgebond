@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import VaultSeal from "@/components/VaultSeal";
 import RibbonButton from "@/components/RibbonButton";
 import WaxStamp from "@/components/WaxStamp";
+import AmbientBackdrop from "@/components/AmbientBackdrop";
 import { setSession, getSession } from "@/lib/session";
 import { sfx, unlockAudio } from "@/lib/sound";
 import { api } from "@/lib/api";
@@ -84,7 +85,8 @@ export default function Landing() {
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center parchment-noise">
-      <div className="mx-auto w-full max-w-[460px] px-5 pt-8 pb-32">
+      <AmbientBackdrop />
+      <div className="mx-auto w-full max-w-[460px] px-5 pt-8 pb-32 relative" style={{ zIndex: 1 }}>
         {/* Social proof counters */}
         {stats && (
           <div className="flex items-center justify-center gap-4 mb-6" data-testid="landing-social-proof">

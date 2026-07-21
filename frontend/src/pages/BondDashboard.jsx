@@ -5,6 +5,7 @@ import VaultSeal from "@/components/VaultSeal";
 import OrbitAvatars from "@/components/OrbitAvatars";
 import WaxStamp from "@/components/WaxStamp";
 import RibbonButton from "@/components/RibbonButton";
+import SealLoader from "@/components/SealLoader";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 import { getSession, markJoined, getMyParticipantId, markWitnessed, isWitnessing } from "@/lib/session";
@@ -220,7 +221,7 @@ export default function BondDashboard() {
     }
   };
 
-  if (loading) return <AppShell><div className="pt-10 text-center font-ui text-ink-500">Fetching the ledger...</div></AppShell>;
+  if (loading) return <AppShell><SealLoader label="Opening the vault..." /></AppShell>;
   if (!bond) return <AppShell><div className="pt-10 text-center font-ui text-ink-500">Bond not found.</div></AppShell>;
 
   return (

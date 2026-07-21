@@ -5,6 +5,7 @@ import { isMuted, setMuted, unlockAudio } from "@/lib/sound";
 import { Volume2, VolumeX, ChevronLeft, Compass } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NotificationsBell } from "@/components/NotificationsBell";
+import AmbientBackdrop from "@/components/AmbientBackdrop";
 
 export const AppShell = ({ children, showBack = false, backTo = null, title = "", right = null }) => {
   const nav = useNavigate();
@@ -23,6 +24,7 @@ export const AppShell = ({ children, showBack = false, backTo = null, title = ""
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col relative parchment-noise">
+      <AmbientBackdrop />
       {/* Top bar */}
       <div className="sticky top-0 z-30 backdrop-blur-sm" style={{ background: "linear-gradient(180deg, rgba(255,251,242,0.96) 0%, rgba(251,242,227,0.86) 100%)", borderBottom: "1px solid rgba(199,177,138,0.55)" }}>
         <div className="mx-auto w-full max-w-[460px] px-4 py-3 flex items-center justify-between">
@@ -72,14 +74,14 @@ export const AppShell = ({ children, showBack = false, backTo = null, title = ""
         </div>
       </div>
 
-      <main className="flex-1 mx-auto w-full max-w-[460px] px-4 pb-32">
+      <main className="flex-1 mx-auto w-full max-w-[460px] px-4 pb-32 relative" style={{ zIndex: 1 }}>
         {children}
       </main>
 
       {/* Footer sentinel */}
-      <div className="mx-auto w-full max-w-[460px] px-4 pb-8 pt-2">
+      <div className="mx-auto w-full max-w-[460px] px-4 pb-8 pt-2 relative" style={{ zIndex: 1 }}>
         <div className="text-center font-ui text-[10px] text-ink-500 tracking-widest uppercase opacity-70">
-          Recorded in the Pledgebond demo ledger
+          {"\u00b7 sealed ledger \u00b7"}
         </div>
       </div>
     </div>

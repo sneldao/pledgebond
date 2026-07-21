@@ -4,6 +4,7 @@ import AppShell from "@/components/AppShell";
 import VaultSeal from "@/components/VaultSeal";
 import WaxStamp from "@/components/WaxStamp";
 import RibbonButton from "@/components/RibbonButton";
+import SealLoader from "@/components/SealLoader";
 import { api } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { motion } from "framer-motion";
@@ -147,8 +148,21 @@ export default function Explore() {
 
             {loading ? (
               <div className="space-y-4 mt-4" role="status" aria-label="Loading bonds">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="h-24 rounded bg-parchment-200 animate-pulse" />
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-4 py-4" style={{ animationDelay: `${i * 0.15}s` }}>
+                    {/* Seal skeleton */}
+                    <div className="shrink-0 w-[82px] h-[82px] rounded-full seal-shimmer" />
+                    {/* Text skeleton */}
+                    <div className="flex-1 space-y-2">
+                      <div className="h-5 w-3/4 seal-shimmer rounded" />
+                      <div className="h-3 w-full seal-shimmer rounded" />
+                      <div className="h-3 w-2/3 seal-shimmer rounded" />
+                      <div className="flex gap-3 mt-2">
+                        <div className="h-3 w-16 seal-shimmer rounded" />
+                        <div className="h-3 w-20 seal-shimmer rounded" />
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : filtered.length === 0 ? (
@@ -179,8 +193,14 @@ function ProofFeed({ proofs, loading, onOpen }) {
   if (loading) {
     return (
       <div className="space-y-3 mt-4" role="status" aria-label="Loading proof feed">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-20 rounded bg-parchment-200 animate-pulse" />
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center gap-3 py-3" style={{ animationDelay: `${i * 0.12}s` }}>
+            <div className="shrink-0 w-10 h-10 rounded-full seal-shimmer" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-2/3 seal-shimmer rounded" />
+              <div className="h-3 w-1/2 seal-shimmer rounded" />
+            </div>
+          </div>
         ))}
       </div>
     );

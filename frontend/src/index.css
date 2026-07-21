@@ -115,6 +115,24 @@
     border-radius: inherit;
   }
 
+  /* Wax-gold shimmer skeleton — replaces gray pulse loaders */
+  .seal-shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(196, 154, 58, 0.08) 0%,
+      rgba(196, 154, 58, 0.18) 40%,
+      rgba(224, 192, 106, 0.22) 50%,
+      rgba(196, 154, 58, 0.18) 60%,
+      rgba(196, 154, 58, 0.08) 100%
+    );
+    background-size: 200% 100%;
+    animation: seal-shimmer 1.8s ease-in-out infinite;
+  }
+  @keyframes seal-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
   /* Ribbon-styled button (notched ends) */
   .ribbon-btn {
     position: relative;

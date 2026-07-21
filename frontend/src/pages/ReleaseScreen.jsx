@@ -6,6 +6,7 @@ import OrbitAvatars from "@/components/OrbitAvatars";
 import PayoutPockets from "@/components/PayoutPockets";
 import WaxStamp from "@/components/WaxStamp";
 import RibbonButton from "@/components/RibbonButton";
+import SealLoader from "@/components/SealLoader";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { toPng } from "html-to-image";
@@ -187,7 +188,7 @@ export default function ReleaseScreen() {
     }
   };
 
-  if (loading || !bond) return <AppShell showBack><div className="pt-10 text-center font-ui text-ink-500">Preparing the stage...</div></AppShell>;
+  if (loading || !bond) return <AppShell showBack><SealLoader label="Preparing the stage..." /></AppShell>;
 
   const released = bond.status === "released";
   const failed = bond.status === "failed";

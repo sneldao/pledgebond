@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { getSession } from "@/lib/session";
+import SealLoader from "@/components/SealLoader";
 
 /**
  * ProtectedRoute
@@ -15,13 +16,10 @@ export function ProtectedRoute({ children, requireSessionInDemo = true }) {
   if (loading) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center"
+        className="min-h-screen flex items-center justify-center parchment-noise"
         style={{ background: "linear-gradient(180deg, #FBF2E3 0%, #F2E6D1 100%)" }}
       >
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-[#C49A3A] border-t-transparent mb-4" />
-          <p className="font-serif-display text-ink-600">Consulting the ledger…</p>
-        </div>
+        <SealLoader label="Consulting the ledger..." fullPage />
       </div>
     );
   }
