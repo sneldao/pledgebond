@@ -7,7 +7,7 @@ import WaxStamp from "@/components/WaxStamp";
 import { setSession, getSession } from "@/lib/session";
 import { unlockAudio } from "@/lib/sound";
 import { toast } from "sonner";
-import { Trophy } from "lucide-react";
+import { Trophy, Target } from "lucide-react";
 
 const ROLES = [
   { key: "funder", label: "Funder", sub: "I stake the seed pledge", color: "#7B1730" },
@@ -42,11 +42,11 @@ export default function Landing() {
         {/* Problem statement — contest voter hook */}
         <div className="text-center mb-8" data-testid="landing-problem-statement">
           <p className="font-ui text-[12px] uppercase tracking-[0.22em] text-wax">
-            84% of private pledges fail
+            {"HERE WE GO \u2014 84% of private pledges fail"}
           </p>
           <p className="mt-1 font-serif-display text-[15px] text-ink-600 leading-snug">
             Pledgebond makes accountability <span className="not-italic text-ink">public</span>.
-            <br />Your vow is witnessed. Your stake flows to charity if you break it.
+            <br />Seal your vow like a transfer deal. Your crew witnesses it. Break it, and everyone sees the L.
           </p>
         </div>
 
@@ -148,8 +148,26 @@ export default function Landing() {
 
         <div className="mt-10 torn-divider" />
 
+        {/* Football CTA — HERE WE GO */}
+        <div className="mt-6 ornate-frame p-4 text-center" data-testid="landing-football-cta">
+          <WaxStamp variant="burgundy" className="text-[9px] mb-2">{"HERE WE GO"}</WaxStamp>
+          <div className="font-serif-display text-[18px] text-ink leading-tight">
+            Seal your football pledge.
+          </div>
+          <p className="font-ui text-[12px] text-ink-600 mt-1">
+            Pledge to hit your goal in 30 days. Your crew witnesses it. Miss the deadline and everyone sees the L.
+          </p>
+          <button
+            onClick={() => nav("/create?template=football")}
+            className="mt-3 ribbon-btn ribbon-btn-gold text-[13px]"
+            data-testid="landing-football-cta-button"
+          >
+            <span className="inline-flex items-center gap-1"><Target size={14} /> Draft a Football Pledge</span>
+          </button>
+        </div>
+
         {/* Contest CTA */}
-        <div className="mt-6 ornate-frame p-4 text-center" data-testid="landing-contest-cta">
+        <div className="mt-4 ornate-frame p-4 text-center" data-testid="landing-contest-cta">
           <WaxStamp variant="gold" className="text-[9px] mb-2">BUILDER'S CONTEST</WaxStamp>
           <div className="font-serif-display text-[18px] text-ink leading-tight">
             Pledge to ship your contest entry.

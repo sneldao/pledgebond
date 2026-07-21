@@ -52,6 +52,31 @@ const CONTEST_TEMPLATE = {
   ],
 };
 
+// Football template — "HERE WE GO" themed pledge for football fans
+const FOOTBALL_TEMPLATE = {
+  title: "HERE WE GO: My Football Pledge",
+  description: "Seal your vow like a transfer deal. Pledge to hit your football goal — fitness, skills, watch every match, or coach your kid's team. Your crew witnesses it. Miss the deadline and everyone sees the L. HERE WE GO.",
+  cause_name: "Grassroots Football Academy",
+  funder_amount: 2000,
+  activation_threshold: 300,
+  fundee_pledge_amount: 15,
+  completion_target_percent: 70,
+  seal_style: "burgundy",
+  cover_emoji: "\u26BD",
+  task_requirements: [
+    { id: crypto.randomUUID(), title: "Log first training session", task_type: "binary", verification: "self_report" },
+    { id: crypto.randomUUID(), title: "Weekly check-in (4 weeks)", task_type: "binary", verification: "self_report" },
+    { id: crypto.randomUUID(), title: "Upload 5K run time (seconds)", task_type: "timed_ranked", verification: "numeric", target: 1800, unit: "sec" },
+    { id: crypto.randomUUID(), title: "Photo proof at finish line", task_type: "binary", verification: "photo_upload" },
+  ],
+  payout_split: [
+    { label: "Grassroots Academy", percent: 60 },
+    { label: "Kit Fund", percent: 25 },
+    { label: "Top Finishers", percent: 10 },
+    { label: "Platform Fee", percent: 5 },
+  ],
+};
+
 export default function CreateBond() {
   const nav = useNavigate();
   const [searchParams] = useSearchParams();
@@ -86,6 +111,10 @@ export default function CreateBond() {
     // Apply contest template if ?template=contest
     if (searchParams.get("template") === "contest") {
       Object.assign(base, CONTEST_TEMPLATE);
+    }
+    // Apply football template if ?template=football
+    if (searchParams.get("template") === "football") {
+      Object.assign(base, FOOTBALL_TEMPLATE);
     }
     // Apply individual URL param overrides (allows deep-linking to pre-filled bonds)
     const titleParam = searchParams.get("title");
