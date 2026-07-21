@@ -5,6 +5,7 @@ import VaultSeal from "@/components/VaultSeal";
 import RibbonButton from "@/components/RibbonButton";
 import WaxStamp from "@/components/WaxStamp";
 import AmbientBackdrop from "@/components/AmbientBackdrop";
+import SoccerBallLoader from "@/components/SoccerBallLoader";
 import { setSession, getSession } from "@/lib/session";
 import { sfx, unlockAudio } from "@/lib/sound";
 import { api } from "@/lib/api";
@@ -26,6 +27,7 @@ export default function Landing() {
   const [stats, setStats] = useState(null);
   const [sealState, setSealState] = useState("idle"); // idle | sealed | released | failed
   const [sealHint, setSealHint] = useState("Tap the seal to see how it works");
+  const [transitioning, setTransitioning] = useState(false);
 
   useEffect(() => {
     document.title = "Pledgebond \u2014 Seal Your Vow";
@@ -74,7 +76,13 @@ export default function Landing() {
     setSession({ displayName: name.trim(), role: "fundee", color: selected?.color || "#A77D2A" });
     toast.success(`Welcome, ${name.trim()}`, { description: `Pledging: ${selected?.label}` });
     if (selected?.template) {
-      nav(`/create?template=${selected.template}`);
+      // Show football-specific transition for football goal
+      if (goal === "football") {
+        setTransitioning(true);
+        setTimeout(() => nav(`/create?template=${selected.template}`), 1200);
+      } else {
+        nav(`/create?template=${selected.template}`);
+      }
     } else {
       nav("/explore");
     }
@@ -86,6 +94,22 @@ export default function Landing() {
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center parchment-noise">
       <AmbientBackdrop />
+
+      {/* Football transition overlay — rolling ball while navigating to template */}
+      <AnimatePresence>
+        {transitioning && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ background: "rgba(255, 251, 242, 0.95)" }}
+            data-testid="landing-football-transition"
+          >
+            <SoccerBallLoader label="HERE WE GO..." size={72} />
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="mx-auto w-full max-w-[460px] px-5 pt-8 pb-32 relative" style={{ zIndex: 1 }}>
         {/* Social proof counters */}
         {stats && (
@@ -237,7 +261,10 @@ export default function Landing() {
 
         {/* Football CTA — HERE WE GO */}
         <div className="mt-6 ornate-frame p-4 text-center" data-testid="landing-football-cta">
-          <WaxStamp variant="burgundy" className="text-[9px] mb-2">{"HERE WE GO"}</WaxStamp>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <SoccerBallLoader label="" size={28} />
+            <WaxStamp variant="burgundy" className="text-[9px]">{"HERE WE GO"}</WaxStamp>
+          </div>
           <div className="font-serif-display text-[18px] text-ink leading-tight">
             Seal your football pledge.
           </div>

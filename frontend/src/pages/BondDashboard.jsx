@@ -6,6 +6,7 @@ import OrbitAvatars from "@/components/OrbitAvatars";
 import WaxStamp from "@/components/WaxStamp";
 import RibbonButton from "@/components/RibbonButton";
 import SealLoader from "@/components/SealLoader";
+import SoccerBallLoader from "@/components/SoccerBallLoader";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 import { getSession, markJoined, getMyParticipantId, markWitnessed, isWitnessing } from "@/lib/session";
@@ -258,6 +259,7 @@ export default function BondDashboard() {
       <div className="pt-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-[11px] font-ui uppercase tracking-widest text-ink-500 min-w-0">
+            {bond.category === "football" && <SoccerBallLoader label="" size={20} />}
             <span className="truncate">{bond.category === "corporate" ? "Corporate Program" : bond.category === "football" ? "Football Pledge" : "Individual Challenge"}</span>
             <span>·</span>
             <span>Bond #{bond.id.slice(0, 6)}</span>
