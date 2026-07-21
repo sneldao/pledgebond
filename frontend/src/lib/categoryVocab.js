@@ -1,7 +1,6 @@
 /**
  * Category vocabulary mapper — gives each bond category its own
- * personality and language. Replaces footballVocab.js with a
- * multi-category system.
+ * personality and language.
  *
  * Categories:
  * - football: transfer deal language (Fabrizio Romano style)
@@ -18,6 +17,7 @@
 
 const FOOTBALL_VOCAB = {
   participants: "squad",
+  participantsLabel: "The squad",
   witnesses: "the crew",
   sealedActive: "Deal Sealed",
   released: "Deal Done",
@@ -46,6 +46,7 @@ const FOOTBALL_VOCAB = {
 
 const FITNESS_VOCAB = {
   participants: "the pack",
+  participantsLabel: "The pack",
   witnesses: "the coaches",
   sealedActive: "Camp Open",
   released: "Goal Hit",
@@ -74,6 +75,7 @@ const FITNESS_VOCAB = {
 
 const PROJECT_VOCAB = {
   participants: "the crew",
+  participantsLabel: "The crew",
   witnesses: "the investors",
   sealedActive: "Build Started",
   released: "Shipped",
@@ -102,6 +104,7 @@ const PROJECT_VOCAB = {
 
 const CUSTOM_VOCAB = {
   participants: "the party",
+  participantsLabel: "The party",
   witnesses: "the witnesses",
   sealedActive: "Sealed · Active",
   released: "Released",
@@ -130,6 +133,7 @@ const CUSTOM_VOCAB = {
 
 const DEFAULT_VOCAB = {
   participants: "participants",
+  participantsLabel: "Witness ledger",
   witnesses: "witnesses",
   sealedActive: "Sealed · Active",
   released: "Released",
@@ -177,10 +181,4 @@ export function tickerText(event) {
   const verb = t.tickerVerb[event.type] || t.tickerVerb.default;
   const prefix = event.category === "football" ? "\uD83D\uDEA8 " : event.category === "fitness" ? "\uD83C\uDFC3 " : event.category === "project" ? "\uD83D\uDE80 " : "\uD83D\uDCDC ";
   return `${prefix}${name} ${verb}`;
-}
-
-// Backward compat — keep the old export name working
-export function fabrizioTickerText(event) {
-  if (event.category !== "football") return null;
-  return tickerText(event);
 }

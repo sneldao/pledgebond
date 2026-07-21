@@ -6,7 +6,7 @@ import WaxStamp from "@/components/WaxStamp";
 import RibbonButton from "@/components/RibbonButton";
 import SealLoader from "@/components/SealLoader";
 import DealTicker from "@/components/DealTicker";
-import EmptyStateIllustration from "@/components/EmptyStateIllustration";
+import { EmptyStateIllustration } from "@/components/PbIllustrations";
 import { api } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { motion } from "framer-motion";

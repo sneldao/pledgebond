@@ -9,8 +9,7 @@ import SealLoader from "@/components/SealLoader";
 import SoccerBallLoader from "@/components/SoccerBallLoader";
 import HereWeGoStamp from "@/components/HereWeGoStamp";
 import MatchdayBackdrop from "@/components/MatchdayBackdrop";
-import EmptyStateIllustration from "@/components/EmptyStateIllustration";
-import { PledgeIcon, WitnessIcon, SealIcon, ReleaseIcon, ProofIcon, SquadIcon, DeadlineIcon, StakeIcon } from "@/components/PbIcons";
+import { EmptyStateIllustration, PledgeIcon, WitnessIcon, SealIcon, ReleaseIcon, ProofIcon, SquadIcon, DeadlineIcon, StakeIcon } from "@/components/PbIllustrations";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 import { getSession, markJoined, getMyParticipantId, markWitnessed, isWitnessing } from "@/lib/session";
@@ -483,7 +482,7 @@ export default function BondDashboard() {
         <div className="flex items-center gap-2 mb-2">
           <h2 className="font-serif-display text-[20px] text-ink flex items-center gap-2">
             <SquadIcon size={16} className="text-wax" />
-            {t.participants === "squad" ? "The squad" : t.participants === "the pack" ? "The pack" : t.participants === "the crew" ? "The crew" : "Witness ledger"}
+            {t.participantsLabel}
           </h2>
           <span className="ink-divider flex-1" />
         </div>

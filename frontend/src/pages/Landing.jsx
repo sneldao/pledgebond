@@ -3,10 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import VaultSeal from "@/components/VaultSeal";
 import RibbonButton from "@/components/RibbonButton";
-import WaxStamp from "@/components/WaxStamp";
 import AmbientBackdrop from "@/components/AmbientBackdrop";
 import SoccerBallLoader from "@/components/SoccerBallLoader";
-import CategoryMotif from "@/components/CategoryMotif";
+import { CategoryMotif } from "@/components/PbIllustrations";
 import { setSession, getSession } from "@/lib/session";
 import { sfx, unlockAudio } from "@/lib/sound";
 import { api } from "@/lib/api";
@@ -23,7 +22,6 @@ const PLEDGE_GOALS = [
 
 // Motion variants — custom easing (emil-design-eng)
 const EASE_OUT = [0.23, 1, 0.32, 1];
-const EASE_IN_OUT = [0.77, 0, 0.175, 1];
 
 const stepVariants = {
   enter: { opacity: 0, y: 24, scale: 0.96 },

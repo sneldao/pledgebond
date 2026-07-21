@@ -9,7 +9,7 @@ import { api } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
-import CategoryMotif from "@/components/CategoryMotif";
+import { CategoryMotif } from "@/components/PbIllustrations";
 
 const TASK_TEMPLATES = [
   { title: "Hula hoop duration (minutes)", task_type: "timed_ranked", verification: "numeric", target: 60, unit: "min" },

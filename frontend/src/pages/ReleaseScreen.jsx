@@ -14,7 +14,7 @@ import { api } from "@/lib/api";
 import { sfx, unlockAudio } from "@/lib/sound";
 import { toast } from "sonner";
 import { Share2, Download, RefreshCcw, Copy, X } from "lucide-react";
-import { SealIcon, ReleaseIcon } from "@/components/PbIcons";
+import { SealIcon, ReleaseIcon } from "@/components/PbIllustrations";
 
 export default function ReleaseScreen() {
   const { id } = useParams();
