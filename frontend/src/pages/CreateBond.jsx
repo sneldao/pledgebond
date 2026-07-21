@@ -78,6 +78,32 @@ const FOOTBALL_TEMPLATE = {
   ],
 };
 
+// Fitness template — general 30-day fitness pledge
+const FITNESS_TEMPLATE = {
+  title: "30-Day Fitness Pledge",
+  category: "individual",
+  description: "Pledge to hit your fitness goal in 30 days — run 5K, hit the gym 3x/week, or beat your personal best. Your crew witnesses every check-in. Miss the deadline and everyone sees the L.",
+  cause_name: "Community Wellness Fund",
+  funder_amount: 1500,
+  activation_threshold: 250,
+  fundee_pledge_amount: 15,
+  completion_target_percent: 70,
+  seal_style: "emerald",
+  cover_emoji: "\uD83C\uDFC3",
+  task_requirements: [
+    { id: crypto.randomUUID(), title: "Log first workout", task_type: "binary", verification: "self_report" },
+    { id: crypto.randomUUID(), title: "Weekly check-in (4 weeks)", task_type: "binary", verification: "self_report" },
+    { id: crypto.randomUUID(), title: "Upload workout photo", task_type: "binary", verification: "photo_upload" },
+    { id: crypto.randomUUID(), title: "Record final 5K time (seconds)", task_type: "timed_ranked", verification: "numeric", target: 1800, unit: "sec" },
+  ],
+  payout_split: [
+    { label: "Community Wellness", percent: 60 },
+    { label: "Gym Fund", percent: 25 },
+    { label: "Top Finishers", percent: 10 },
+    { label: "Platform Fee", percent: 5 },
+  ],
+};
+
 export default function CreateBond() {
   const nav = useNavigate();
   const [searchParams] = useSearchParams();
@@ -116,6 +142,10 @@ export default function CreateBond() {
     // Apply football template if ?template=football
     if (searchParams.get("template") === "football") {
       Object.assign(base, FOOTBALL_TEMPLATE);
+    }
+    // Apply fitness template if ?template=fitness
+    if (searchParams.get("template") === "fitness") {
+      Object.assign(base, FITNESS_TEMPLATE);
     }
     // Apply individual URL param overrides (allows deep-linking to pre-filled bonds)
     const titleParam = searchParams.get("title");

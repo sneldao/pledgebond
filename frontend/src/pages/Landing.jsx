@@ -1,28 +1,63 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import VaultSeal from "@/components/VaultSeal";
 import RibbonButton from "@/components/RibbonButton";
 import WaxStamp from "@/components/WaxStamp";
 import { setSession, getSession } from "@/lib/session";
-import { unlockAudio } from "@/lib/sound";
+import { sfx, unlockAudio } from "@/lib/sound";
+import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Trophy, Target } from "lucide-react";
+import confetti from "canvas-confetti";
+import { Trophy, Target, Sparkles, TrendingUp, Eye, CheckCircle } from "lucide-react";
 
-const ROLES = [
-  { key: "funder", label: "Funder", sub: "I stake the seed pledge", color: "#7B1730" },
-  { key: "fundee", label: "Fundee", sub: "I match & commit to the tasks", color: "#A77D2A" },
-  { key: "organizer", label: "Organizer", sub: "I witness & monitor progress", color: "#1F6B4E" },
+const PLEDGE_GOALS = [
+  { key: "football", label: "Football goal", sub: "Fitness, skills, or match streak", icon: "\u26BD", template: "football", color: "#7B1730" },
+  { key: "fitness", label: "Fitness goal", sub: "Run, lift, or train for 30 days", icon: "\uD83C\uDFC3", template: "fitness", color: "#1F6B4E" },
+  { key: "project", label: "Ship a project", sub: "Launch by deadline, no excuses", icon: "\uD83D\uDE80", template: "contest", color: "#A77D2A" },
+  { key: "custom", label: "Something else", sub: "Any pledge you can seal", icon: "\u2728", template: null, color: "#2B4A66" },
 ];
 
 export default function Landing() {
   const nav = useNavigate();
   const [name, setName] = useState(getSession()?.displayName || "");
-  const [role, setRole] = useState(getSession()?.role || "fundee");
+  const [goal, setGoal] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [sealState, setSealState] = useState("idle"); // idle | sealed | released | failed
+  const [sealHint, setSealHint] = useState("Tap the seal to see how it works");
 
   useEffect(() => {
-    document.title = "Pledgebond \u2014 Enter";
+    document.title = "Pledgebond \u2014 Seal Your Vow";
+    api.stats().then(setStats).catch(() => {});
   }, []);
+
+  const tapSeal = useCallback(() => {
+    unlockAudio();
+    if (sealState === "idle") {
+      setSealState("sealed");
+      setSealHint("The vault is sealed. Your crew is watching.");
+      sfx.sealLock();
+    } else if (sealState === "sealed") {
+      setSealState("released");
+      setSealHint("Goal met. The vault opens. HERE WE GO.");
+      sfx.release();
+      // Confetti burst
+      const sealEl = document.getElementById("landing-interactive-seal");
+      if (sealEl) {
+        const rect = sealEl.getBoundingClientRect();
+        const x = (rect.left + rect.width / 2) / window.innerWidth;
+        const y = (rect.top + rect.height / 2) / window.innerHeight;
+        confetti({ particleCount: 80, spread: 70, origin: { x, y }, colors: ["#C49A3A", "#E0C06A", "#9A1F3D", "#1F6B4E"] });
+      }
+    } else if (sealState === "released") {
+      setSealState("failed");
+      setSealHint("Deadline missed. The vault stays shut. Everyone sees the L.");
+      sfx.fail();
+    } else {
+      setSealState("idle");
+      setSealHint("Tap the seal to see how it works");
+    }
+  }, [sealState]);
 
   const proceed = () => {
     unlockAudio();
@@ -30,17 +65,37 @@ export default function Landing() {
       toast.error("Sign your mark first", { description: "Enter a display name to be witnessed on the ledger." });
       return;
     }
-    const roleColor = ROLES.find((r) => r.key === role)?.color;
-    setSession({ displayName: name.trim(), role, color: roleColor });
-    toast.success(`Welcome, ${name.trim()}`, { description: `Role: ${ROLES.find(r => r.key === role)?.label}` });
-    nav("/explore");
+    if (!goal) {
+      toast.error("Choose what you're pledging", { description: "Pick a goal above to get started." });
+      return;
+    }
+    const selected = PLEDGE_GOALS.find((g) => g.key === goal);
+    setSession({ displayName: name.trim(), role: "fundee", color: selected?.color || "#A77D2A" });
+    toast.success(`Welcome, ${name.trim()}`, { description: `Pledging: ${selected?.label}` });
+    if (selected?.template) {
+      nav(`/create?template=${selected.template}`);
+    } else {
+      nav("/explore");
+    }
   };
+
+  const sealStatus = sealState === "sealed" || sealState === "released" ? "active" : sealState === "failed" ? "failed" : "pending";
+  const sealPledgeRatio = sealState === "released" ? 1 : sealState === "sealed" ? 0.7 : 0.45;
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col items-center parchment-noise">
-      <div className="mx-auto w-full max-w-[460px] px-5 pt-10 pb-32">
-        {/* Problem statement — contest voter hook */}
-        <div className="text-center mb-8" data-testid="landing-problem-statement">
+      <div className="mx-auto w-full max-w-[460px] px-5 pt-8 pb-32">
+        {/* Social proof counters */}
+        {stats && (
+          <div className="flex items-center justify-center gap-4 mb-6" data-testid="landing-social-proof">
+            <StatPill icon={<CheckCircle size={12} />} value={stats.bonds_sealed} label="sealed" />
+            <StatPill icon={<Eye size={12} />} value={stats.witnesses_watching} label="watching" />
+            <StatPill icon={<TrendingUp size={12} />} value={stats.proofs_logged} label="proofs logged" />
+          </div>
+        )}
+
+        {/* Problem statement */}
+        <div className="text-center mb-6" data-testid="landing-problem-statement">
           <p className="font-ui text-[12px] uppercase tracking-[0.22em] text-wax">
             {"HERE WE GO \u2014 84% of private pledges fail"}
           </p>
@@ -66,61 +121,90 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* Seal */}
-        <div className="relative flex items-center justify-center my-8">
-          <motion.div
-            animate={{ y: [0, -4, 0] }}
-            transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
+        {/* Interactive vault seal — tap to cycle through states */}
+        <div className="relative flex flex-col items-center justify-center my-6" data-testid="landing-interactive-seal-container">
+          <button
+            id="landing-interactive-seal"
+            onClick={tapSeal}
+            data-testid="landing-interactive-seal-button"
+            className="relative cursor-pointer outline-none"
+            aria-label="Tap the seal to preview the pledge lifecycle"
           >
-            <VaultSeal status="pending" pledgeRatio={0.55} size={260} style="burgundy" showTension={false} hidePill />
-          </motion.div>
+            <motion.div
+              key={sealState}
+              initial={sealState !== "idle" ? { scale: 0.85, opacity: 0.5 } : false}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", damping: 18, stiffness: 280 }}
+            >
+              <VaultSeal
+                status={sealStatus}
+                pledgeRatio={sealPledgeRatio}
+                size={240}
+                style="burgundy"
+                showTension={sealState === "sealed"}
+                hidePill
+              />
+            </motion.div>
+          </button>
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={sealHint}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              className={`mt-3 font-serif-display text-[14px] text-center max-w-[300px] ${
+                sealState === "failed" ? "text-wax italic" : sealState === "released" ? "text-emerald-800" : "text-ink-600"
+              }`}
+              data-testid="landing-seal-hint"
+            >
+              {sealHint}
+            </motion.p>
+          </AnimatePresence>
+          {/* State dots */}
+          <div className="mt-2 flex items-center gap-1.5">
+            {["idle", "sealed", "released", "failed"].map((s) => (
+              <div
+                key={s}
+                className={`w-1.5 h-1.5 rounded-full transition-colors ${sealState === s ? "bg-wax" : "bg-parchment-300"}`}
+              />
+            ))}
+          </div>
         </div>
 
-        {/* Role ribbons */}
+        {/* Goal question — replaces role picker */}
         <div className="space-y-3 mt-6">
           <div className="font-serif-display text-[18px] text-ink-700 flex items-center gap-2">
-            <span className="w-8 ink-divider" /> Choose your seat at the table <span className="flex-1 ink-divider" />
+            <span className="w-8 ink-divider" /> What are you pledging? <span className="flex-1 ink-divider" />
           </div>
-          <div className="grid grid-cols-1 gap-2">
-            {ROLES.map((r) => (
+          <div className="grid grid-cols-2 gap-2">
+            {PLEDGE_GOALS.map((g) => (
               <button
-                key={r.key}
-                onClick={() => setRole(r.key)}
-                data-testid={`role-picker-${r.key}-button`}
-                className={`w-full text-left px-4 py-3 border transition-colors flex items-center gap-3 ${
-                  role === r.key
-                    ? "border-ink bg-parchment-200"
+                key={g.key}
+                onClick={() => setGoal(g.key)}
+                data-testid={`goal-picker-${g.key}-button`}
+                className={`text-left px-3 py-3 border transition-all flex flex-col gap-1 ${
+                  goal === g.key
+                    ? "border-ink bg-parchment-200 scale-[1.02]"
                     : "border-parchment-300 hover:bg-parchment-200/60"
                 }`}
-                style={{
-                  clipPath: "polygon(0% 0%, 100% 0%, calc(100% - 12px) 50%, 100% 100%, 0% 100%, 12px 50%)",
-                }}
               >
-                <span
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-parchment font-ui font-semibold text-[12px]"
-                  style={{ background: r.color }}
-                >
-                  {r.label[0]}
-                </span>
-                <span className="flex-1">
-                  <span className="block font-serif-display text-[19px] text-ink">{r.label}</span>
-                  <span className="block font-ui text-[12px] text-ink-500">{r.sub}</span>
-                </span>
-                {role === r.key && <WaxStamp variant="gold">Chosen</WaxStamp>}
+                <span className="text-[20px]">{g.icon}</span>
+                <span className="font-serif-display text-[16px] text-ink leading-tight">{g.label}</span>
+                <span className="font-ui text-[11px] text-ink-500">{g.sub}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* Name input */}
-        <div className="mt-8 space-y-2">
+        <div className="mt-6 space-y-2">
           <label htmlFor="display-name-input" className="font-serif-display text-[16px] text-ink-700">Sign your mark</label>
           <input
             id="display-name-input"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Ada Lovelace"
+            placeholder="e.g. Marco Rossi"
             data-testid="landing-display-name-input"
             aria-describedby="name-help"
             className="w-full px-4 py-3 bg-parchment-50 border-b-2 border-ink outline-none font-ui text-[16px] text-ink placeholder:text-ink-500/50 focus:border-wax transition-colors"
@@ -128,21 +212,22 @@ export default function Landing() {
           <p id="name-help" className="font-ui text-[11px] text-ink-500">No account required. Your name is stored only on this device.</p>
         </div>
 
-        <div className="mt-8 flex flex-col gap-3">
+        <div className="mt-6 flex flex-col gap-3">
           <RibbonButton
             variant="wax"
             onClick={proceed}
             data-testid="landing-continue-button"
             className="w-full"
           >
-            Enter the Rotunda
+            <Sparkles size={14} className="inline mr-1" />
+            {goal ? `Seal Your ${PLEDGE_GOALS.find((g) => g.key === goal)?.label}` : "Choose a goal to begin"}
           </RibbonButton>
           <button
             onClick={() => nav("/explore")}
             className="font-ui text-[13px] text-ink-500 underline underline-offset-4 hover:text-ink"
             data-testid="landing-preview-button"
           >
-            Preview without signing
+            Browse open bonds first
           </button>
         </div>
 
@@ -158,7 +243,7 @@ export default function Landing() {
             Pledge to hit your goal in 30 days. Your crew witnesses it. Miss the deadline and everyone sees the L.
           </p>
           <button
-            onClick={() => nav("/create?template=football")}
+            onClick={() => { unlockAudio(); nav("/create?template=football"); }}
             className="mt-3 ribbon-btn ribbon-btn-gold text-[13px]"
             data-testid="landing-football-cta-button"
           >
@@ -176,7 +261,7 @@ export default function Landing() {
             Join the self-referential bond — witnesses hold you accountable to your deadline.
           </p>
           <button
-            onClick={() => nav("/create?template=contest")}
+            onClick={() => { unlockAudio(); nav("/create?template=contest"); }}
             className="mt-3 ribbon-btn ribbon-btn-gold text-[13px]"
             data-testid="landing-contest-cta-button"
           >
@@ -188,6 +273,16 @@ export default function Landing() {
           Stakes are pledge points — commitment signals, not real money. Your reputation is the real currency.
         </p>
       </div>
+    </div>
+  );
+}
+
+function StatPill({ icon, value, label }) {
+  return (
+    <div className="flex items-center gap-1.5" data-testid={`landing-stat-${label.replace(/\s/g, "-")}`}>
+      <span className="text-wax">{icon}</span>
+      <span className="font-serif-display text-[18px] text-ink leading-none">{value}</span>
+      <span className="font-ui text-[10px] uppercase tracking-wider text-ink-500">{label}</span>
     </div>
   );
 }

@@ -330,6 +330,29 @@ async def list_bonds(status: Optional[str] = None, category: Optional[str] = Non
     return updated
 
 
+@api_router.get("/stats")
+async def get_stats():
+    """Aggregate stats for social proof on Landing."""
+    bonds = await db.bonds.find({}, {"_id": 0}).to_list(1000)
+    sealed = sum(1 for b in bonds if b.get("status") in ("active", "released"))
+    released = sum(1 for b in bonds if b.get("status") == "released")
+    witnesses = sum(len(b.get("witnesses", [])) for b in bonds)
+    participants = sum(len(b.get("participants", [])) for b in bonds)
+    # Count completed proofs across all bonds
+    proofs_completed = 0
+    for b in bonds:
+        task_ids = {t["id"] for t in b.get("task_requirements", [])}
+        for p in b.get("participants", []):
+            proofs_completed += len(set(p.get("completed_tasks", [])) & task_ids)
+    return {
+        "bonds_sealed": sealed,
+        "bonds_released": released,
+        "witnesses_watching": witnesses,
+        "participants_pledged": participants,
+        "proofs_logged": proofs_completed,
+    }
+
+
 @api_router.get("/bonds/{bond_id}", response_model=PledgeBond)
 async def get_bond(bond_id: str):
     bond = await db.bonds.find_one({"id": bond_id}, {"_id": 0})

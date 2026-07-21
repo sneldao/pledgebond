@@ -88,6 +88,11 @@ export const api = {
     const { data } = await client.get(`/bonds/${id}/og`);
     return data;
   },
+  // Stats for social proof
+  stats: async () => {
+    const { data } = await client.get("/stats");
+    return data;
+  },
   // Auth endpoints
   auth: {
     register: async (body) => {

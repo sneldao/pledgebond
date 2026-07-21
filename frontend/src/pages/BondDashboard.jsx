@@ -348,6 +348,29 @@ export default function BondDashboard() {
         )}
       </div>
 
+      {/* Viral loop closure — prompt to create your own pledge after witnessing */}
+      {alreadyWitnessing && !alreadyJoined && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-4 ornate-frame p-3 flex items-center gap-3"
+          data-testid="bond-create-your-own-prompt"
+        >
+          <span className="text-[24px]">{"\u2728"}</span>
+          <div className="flex-1 min-w-0">
+            <p className="font-serif-display text-[14px] text-ink leading-tight">You're witnessing. Now seal your own vow.</p>
+            <p className="font-ui text-[11px] text-ink-500">HERE WE GO — pledge your goal and get your crew to witness you.</p>
+          </div>
+          <button
+            onClick={() => nav("/create?template=football")}
+            className="shrink-0 ribbon-btn ribbon-btn-gold text-[12px]"
+            data-testid="bond-create-your-own-button"
+          >
+            Seal my vow
+          </button>
+        </motion.div>
+      )}
+
       {/* Description */}
       <div className="mt-6 ornate-frame p-4">
         <div className="font-ui text-[11px] uppercase tracking-widest text-ink-500 mb-1">The pledge</div>
