@@ -84,6 +84,7 @@ export default function BondDashboard() {
     const total = Math.max(1, deadlineMs - createdMs);
     const elapsed = Math.max(0, Math.min(total, now - createdMs));
     return elapsed / total;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bond, tick]);
 
   const completionRatio = useMemo(() => {
@@ -232,13 +233,13 @@ export default function BondDashboard() {
           <h2 className="font-serif-display text-[20px] text-ink">Witness ledger</h2>
           <span className="ink-divider flex-1" />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-1" role="list" aria-label="Participant leaderboard">
           {(bond.participants || [])
             .slice()
             .sort((a, b) => (b.completed_tasks?.length || 0) - (a.completed_tasks?.length || 0))
             .slice(0, 8)
             .map((p, idx) => (
-              <div key={p.id} className="ledger-row flex items-center gap-3 py-2" data-testid={`bond-leaderboard-row-${idx}`}>
+              <div key={p.id} className="ledger-row flex items-center gap-3 py-2" role="listitem" data-testid={`bond-leaderboard-row-${idx}`} aria-label={`${p.display_name}: ${(p.completed_tasks || []).length} of ${bond.task_requirements.length} clauses completed`}>
                 <div className="w-6 text-center font-serif-display text-[15px] text-ink-700">{idx + 1}</div>
                 <div
                   className="w-8 h-8 rounded-full flex items-center justify-center text-parchment font-ui font-semibold text-[11px] border border-ink"
@@ -259,7 +260,7 @@ export default function BondDashboard() {
       </div>
 
       {/* Sticky bottom actions */}
-      <div className="fixed bottom-0 left-0 right-0 z-40" style={{ background: "linear-gradient(0deg, rgba(255,251,242,1) 60%, rgba(255,251,242,0))" }}>
+      <div className="fixed bottom-0 left-0 right-0 z-40" role="toolbar" aria-label="Bond actions" style={{ background: "linear-gradient(0deg, rgba(255,251,242,1) 60%, rgba(255,251,242,0))" }}>
         <div className="mx-auto w-full max-w-[460px] px-4 py-3 flex items-center gap-2">
           {bond.status === "pending" && (
             <RibbonButton
