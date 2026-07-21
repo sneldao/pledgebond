@@ -6,6 +6,8 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
 
+from auth import require_user
+
 logger = logging.getLogger(__name__)
 
 templates_router = APIRouter(prefix="/templates", tags=["templates"])

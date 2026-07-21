@@ -7,6 +7,8 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
+from auth import require_user
+
 logger = logging.getLogger(__name__)
 
 referrals_router = APIRouter(prefix="/referrals", tags=["referrals"])
