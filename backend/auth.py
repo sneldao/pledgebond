@@ -165,7 +165,61 @@ async def get_current_user(authorization: Optional[str] = Header(None), db=None)
         return None
 
 
-async def require_user(authorization: Optional[str] = Header(None)) -> dict:
+def _auth_enabled() -> bool:
+    return os.environ.get("ENABLE_AUTH", "0").strip().lower() in ("1", "true", "yes", "on")
+
+
+def _demo_user_from_headers(demo_name: Optional[str], demo_role: Optional[str]) -> dict:
+    """Synthesize a demo user so routes protected by require_user still work when ENABLE_AUTH=0."""
+    name = (demo_name or "Guest Witness").strip() or "Guest Witness"
+    role = (demo_role or "fundee").strip().lower() or "fundee"
+    # deterministic-ish id per display name so referrals/leaderboards attribute consistently in demo mode
+    demo_id = "demo-" + hashlib.sha256(name.lower().encode()).hexdigest()[:16]
+    now = _now_iso()
+    return {
+        "id": demo_id,
+        "email": f"{demo_id}@demo.pledgebond.local",
+        "display_name": name,
+        "avatar_url": "",
+        "role": role,
+        "auth_method": "demo",
+        "email_verified": False,
+        "referral_code": demo_id[-8:],
+        "referred_by": None,
+        "trust_score": 0.0,
+        "completion_count": 0,
+        "streak": 0,
+        "longest_streak": 0,
+        "last_active": now,
+        "created_at": now,
+        "updated_at": now,
+        "_demo": True,
+    }
+
+
+async def require_user(
+    authorization: Optional[str] = Header(None),
+    x_demo_name: Optional[str] = Header(None, alias="X-Demo-Name"),
+    x_demo_role: Optional[str] = Header(None, alias="X-Demo-Role"),
+) -> dict:
+    # ---- Demo mode: no real auth required ----
+    if not _auth_enabled():
+        # If a real bearer token happens to be present, still try to honor it.
+        if authorization:
+            try:
+                scheme, _, token = authorization.partition(" ")
+                if scheme.lower() == "bearer":
+                    payload = decode_token(token)
+                    if payload.get("type") == "access":
+                        from server import db
+                        user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0, "password_hash": 0})
+                        if user:
+                            return user
+            except Exception:
+                pass
+        return _demo_user_from_headers(x_demo_name, x_demo_role)
+
+    # ---- Real auth required ----
     if not authorization:
         raise HTTPException(401, "Authentication required")
     try:

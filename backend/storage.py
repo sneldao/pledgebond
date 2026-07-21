@@ -1,29 +1,43 @@
-import boto3
 import os
 import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from botocore.exceptions import ClientError
 import logging
+
+# Optional S3 dependency \u2014 module still imports cleanly without boto3 installed.
+try:
+    import boto3
+    from botocore.exceptions import ClientError
+    _BOTO_AVAILABLE = True
+except Exception:  # pragma: no cover
+    boto3 = None
+    ClientError = Exception  # type: ignore
+    _BOTO_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
 storage_router = APIRouter(prefix="/storage", tags=["storage"])
 
 # AWS S3 configuration
-AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
-AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID") or os.environ.get("S3_ACCESS_KEY")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY") or os.environ.get("S3_SECRET_KEY")
+AWS_REGION = os.environ.get("AWS_REGION") or os.environ.get("S3_REGION", "us-east-1")
 S3_BUCKET = os.environ.get("S3_BUCKET", "pledgebond-proofs")
 S3_PUBLIC_URL = os.environ.get("S3_PUBLIC_URL", f"https://{S3_BUCKET}.s3.{AWS_REGION}.amazonaws.com")
 
-# Initialize S3 client
-s3_client = boto3.client(
-    "s3",
-    aws_access_key_id=AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-    region_name=AWS_REGION,
-) if AWS_ACCESS_KEY_ID else None
+# Initialize S3 client only if boto3 is available AND creds are set
+s3_client = None
+if _BOTO_AVAILABLE and AWS_ACCESS_KEY_ID:
+    try:
+        s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            region_name=AWS_REGION,
+        )
+    except Exception as e:
+        logger.warning("S3 client init failed: %s", e)
+        s3_client = None
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf"}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB

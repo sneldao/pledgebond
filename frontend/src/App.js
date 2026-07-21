@@ -2,16 +2,16 @@ import { useEffect } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Landing from "@/pages/Landing";
-import Login from "@/pages/Login";
-import Register from "@/pages/Register";
 import Explore from "@/pages/Explore";
 import CreateBond from "@/pages/CreateBond";
 import BondDashboard from "@/pages/BondDashboard";
 import ProofSubmission from "@/pages/ProofSubmission";
 import ReleaseScreen from "@/pages/ReleaseScreen";
+import Login from "@/pages/Login";
+import Register from "@/pages/Register";
 import { getSession } from "@/lib/session";
 
 function Redirector() {
@@ -19,9 +19,15 @@ function Redirector() {
   return <Navigate to={session ? "/explore" : "/"} replace />;
 }
 
+// AuthGate routes conditionally exposed based on features.auth
+function AuthOnlyRoute({ children }) {
+  const { authEnabled } = useAuth();
+  if (!authEnabled) return <Navigate to="/" replace />;
+  return children;
+}
+
 function App() {
   useEffect(() => {
-    // Set page title
     document.title = "Pledgebond \u2014 A pledge is a sealed contract";
   }, []);
 
@@ -31,8 +37,8 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<AuthOnlyRoute><Login /></AuthOnlyRoute>} />
+            <Route path="/register" element={<AuthOnlyRoute><Register /></AuthOnlyRoute>} />
             <Route path="/explore" element={<Explore />} />
             <Route
               path="/create"
@@ -51,14 +57,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/bond/:id/release"
-              element={
-                <ProtectedRoute>
-                  <ReleaseScreen />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/bond/:id/release" element={<ReleaseScreen />} />
             <Route path="*" element={<Redirector />} />
           </Routes>
         </BrowserRouter>

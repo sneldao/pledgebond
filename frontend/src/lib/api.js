@@ -1,5 +1,6 @@
 import axios from "axios";
 import { getAuthHeader } from "./auth";
+import { getSession } from "./session";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
@@ -10,10 +11,16 @@ const client = axios.create({
   timeout: 15000,
 });
 
-// Add auth headers to all requests
+// Add auth headers + demo headers to all requests
 client.interceptors.request.use((config) => {
   const authHeaders = getAuthHeader();
   Object.assign(config.headers, authHeaders);
+  // Demo-mode identity: lets backend require_user synthesize a user when ENABLE_AUTH=0
+  const session = getSession();
+  if (session) {
+    config.headers["X-Demo-Name"] = session.displayName;
+    config.headers["X-Demo-Role"] = session.role;
+  }
   return config;
 });
 
