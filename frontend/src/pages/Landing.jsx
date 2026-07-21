@@ -45,8 +45,13 @@ export default function Landing() {
             Pledge<span className="text-wax">bond</span>
           </h1>
           <p className="mt-2 font-serif-display italic text-[15px] text-ink-600">
-            A pledge is a sealed contract — kept, or broken, together.
+            Seal the vow. Match the stake. Walk it out together.
           </p>
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <span className="ink-divider w-10" />
+            <WaxStamp variant="gold" className="text-[9px]">EST. MMXXVI</WaxStamp>
+            <span className="ink-divider w-10" />
+          </div>
         </div>
 
         {/* Seal */}
