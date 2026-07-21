@@ -1,0 +1,42 @@
+[
+  {
+    "content": "Phase 1: Get design guidelines from design_agent",
+    "status": "in_progress"
+  },
+  {
+    "content": "Phase 1: Install animation/sound dependencies (framer-motion, canvas-confetti, howler)",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 1: Build Vault/Seal SVG component with state machine (Pending→Active→Released/Failed)",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 1: Implement audio cues (pledge-in, seal-lock, release) with mute toggle",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 1: Screenshot and validate vault animations on mobile viewport",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 2: Backend — FastAPI models, endpoints, seed data",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 2: Frontend — Landing/Role picker, Explore feed, Create Bond wizard",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 2: Frontend — Bond Dashboard, Join flow, Proof submission, Release screen, Share",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 2: Wire full end-to-end loop with seeded bonds + new bond creation",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 3: End-to-end testing with testing_agent_v3, fix issues",
+    "status": "pending"
+  }
+]
