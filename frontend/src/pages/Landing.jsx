@@ -185,7 +185,7 @@ export default function Landing() {
         </div>
 
         <p className="mt-4 font-ui text-[11px] text-ink-500 text-center">
-          Pledgebond is a demo ledger. No real payments are processed.
+          Stakes are pledge points — commitment signals, not real money. Your reputation is the real currency.
         </p>
       </div>
     </div>

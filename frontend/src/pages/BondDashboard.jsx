@@ -10,7 +10,7 @@ import { api } from "@/lib/api";
 import { getSession, markJoined, getMyParticipantId, markWitnessed, isWitnessing } from "@/lib/session";
 import { sfx, unlockAudio } from "@/lib/sound";
 import { toast } from "sonner";
-import { Check, Trophy, Share2, RotateCcw, Sparkles, Eye, Copy, Download, X } from "lucide-react";
+import { Check, Trophy, Share2, ScrollText, Sparkles, Eye, Copy, Download, X } from "lucide-react";
 
 function fmtCountdown(iso) {
   const dt = new Date(iso).getTime();
@@ -142,16 +142,6 @@ export default function BondDashboard() {
 
   const goRelease = async () => {
     nav(`/bond/${id}/release`);
-  };
-
-  const resetDemo = async () => {
-    try {
-      const b = await api.resetBond(id);
-      setBond(b);
-      toast.success("Bond reset to Pending (demo)");
-    } catch (e) {
-      toast.error("Reset failed");
-    }
   };
 
   const alreadyWitnessing = isWitnessing(id);
@@ -457,8 +447,8 @@ export default function BondDashboard() {
               <RibbonButton variant="gold" className="flex-1" onClick={goRelease} data-testid="bond-dashboard-view-release-button">
                 <Trophy size={14} className="inline mr-1" /> View the {bond.status === "released" ? "release" : "outcome"}
               </RibbonButton>
-              <RibbonButton variant="ghost" onClick={resetDemo} data-testid="bond-dashboard-reset-button">
-                <RotateCcw size={14} />
+              <RibbonButton variant="ghost" className="flex-1" onClick={() => nav("/explore")} data-testid="bond-dashboard-back-to-explore">
+                <ScrollText size={14} className="inline mr-1" /> Browse more bonds
               </RibbonButton>
             </>
           )}

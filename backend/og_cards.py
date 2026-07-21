@@ -230,9 +230,13 @@ def render_bond_card(bond: dict) -> bytes:
     text_x = 380
     text_max_w = 780
 
-    # Top label — "PLEDGEBOND" in gold tracking
+    # Top label — "PLEDGEBOND" in gold tracking, or "HERE WE GO" for football bonds
     label_font = _font("DMSans-Medium.ttf", 16)
-    draw.text((text_x, 60), "P L E D G E B O N D", font=label_font, fill=WAX_GOLD)
+    category = bond.get("category", "")
+    if category == "football":
+        draw.text((text_x, 60), "H E R E   W E   G O   \u26bd   P L E D G E B O N D", font=label_font, fill=WAX_GOLD)
+    else:
+        draw.text((text_x, 60), "P L E D G E B O N D", font=label_font, fill=WAX_GOLD)
 
     # Sub-label — "A pledge is a sealed contract"
     sub_font = _font("CormorantGaramond-SemiBold.ttf", 18)
@@ -286,9 +290,11 @@ def render_bond_card(bond: dict) -> bytes:
         cause_y = CARD_H - 70
         draw.text((text_x, cause_y), f"In benefit of — {cause}", font=cause_font, fill=INK_600)
 
-    # Bottom-right tagline
+    # Bottom-right tagline — use FRONTEND_URL if available
     tag_font = _font("DMSans-Regular.ttf", 13)
-    tag = "pledgebond.app"
+    frontend_url = os.environ.get("FRONTEND_URL", "pledgebond.app")
+    # Strip protocol for display
+    tag = frontend_url.replace("https://", "").replace("http://", "").rstrip("/")
     bbox = draw.textbbox((0, 0), tag, font=tag_font)
     tw = bbox[2] - bbox[0]
     draw.text((CARD_W - 48 - tw, CARD_H - 48), tag, font=tag_font, fill=INK_500)

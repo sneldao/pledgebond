@@ -237,7 +237,7 @@ export default function ReleaseScreen() {
           <div className="mt-6 text-center px-4">
             {released && (
               <p className="font-serif-display text-[17px] text-ink leading-snug">
-                The seal cracked. The vault opened. Coins are dispatched to the pockets below — recorded in the demo ledger.
+                The seal cracked. The vault opened. Pledge points are dispatched to the pockets below — the ledger is sealed.
               </p>
             )}
             {failed && (
@@ -256,7 +256,7 @@ export default function ReleaseScreen() {
           <div className="inline-flex items-center gap-2 opacity-70">
             <div className="w-6 h-6 rounded-full" style={{ background: "radial-gradient(circle at 30% 30%, #9A1F3D 0%, #7B1730 60%, #4A0F1E 100%)" }} />
             <span className="font-serif-display text-[15px] text-ink">Pledgebond</span>
-            <span className="font-ui text-[11px] text-ink-500">· demo ledger</span>
+            <span className="font-ui text-[11px] text-ink-500">· sealed ledger</span>
           </div>
         </div>
       </div>
@@ -313,7 +313,7 @@ export default function ReleaseScreen() {
                 <button onClick={downloadShareCard} className="ribbon-btn ribbon-btn-gold" data-testid="share-download-button"><Download size={14} className="inline mr-2" /> Download share card (.png)</button>
                 <button onClick={copyLink} className="ribbon-btn ribbon-btn-ghost" data-testid="share-copy-link-button"><Copy size={14} className="inline mr-2" /> Copy bond link</button>
               </div>
-              <div className="mt-3 text-center font-ui text-[11px] text-ink-500">Recorded as demo ledger. No real payments processed.</div>
+              <div className="mt-3 text-center font-ui text-[11px] text-ink-500">Pledge points are commitment signals — your reputation is the real stake.</div>
             </motion.div>
           </motion.div>
         )}
