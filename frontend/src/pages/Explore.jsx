@@ -305,6 +305,7 @@ function BondRow({ bond, onOpen, index }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-serif-display text-[19px] text-ink leading-tight truncate">
+            {bond.category === "football" && bond.status === "active" && <span className="live-dot live-dot--burgundy mr-1.5" />}
             {bond.category === "football" && <span className="mr-1">{"\u26BD"}</span>}
             {bond.title}
           </h3>

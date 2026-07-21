@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* -------- Fonts (Pledgebond) -------- */
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 @layer base {
   :root {
@@ -98,6 +98,12 @@
     font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   }
 
+  /* Broadcast mono — for data, counters, scoreboards */
+  .font-mono-broadcast {
+    font-family: 'JetBrains Mono', 'DM Mono', monospace;
+    letter-spacing: 0.06em;
+  }
+
   /* Parchment overlays */
   .parchment-noise {
     position: relative;
@@ -137,6 +143,198 @@
   @keyframes deadline-pulse {
     0%, 100% { border-color: rgba(196, 154, 58, 0.6); box-shadow: 0 0 0 0 rgba(196, 154, 58, 0); }
     50% { border-color: rgba(196, 154, 58, 1); box-shadow: 0 0 20px 4px rgba(196, 154, 58, 0.15); }
+  }
+
+  /* ===== Matchday dark register (football bonds) ===== */
+  .matchday-shell {
+    background: linear-gradient(160deg, #1a0a12 0%, #2a0f1a 40%, #1a0a12 100%) !important;
+    color: #f2e6d1;
+  }
+  .matchday-shell .parchment-noise::before { display: none; }
+  .matchday-shell .text-ink { color: #f2e6d1 !important; }
+  .matchday-shell .text-ink-500 { color: rgba(242, 230, 209, 0.6) !important; }
+  .matchday-shell .text-ink-600 { color: rgba(242, 230, 209, 0.7) !important; }
+  .matchday-shell .text-ink-700 { color: rgba(242, 230, 209, 0.8) !important; }
+  .matchday-shell .border-ink { border-color: rgba(242, 230, 209, 0.2) !important; }
+  .matchday-shell .border-parchment-300 { border-color: rgba(242, 230, 209, 0.15) !important; }
+  .matchday-shell .bg-parchment-200 { background: rgba(242, 230, 209, 0.08) !important; }
+
+  /* Stadium grid overlay */
+  .stadium-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      linear-gradient(to right, rgba(196, 154, 58, 0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(196, 154, 58, 0.06) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Ambient blur orbs — floodlight effect */
+  .stadium-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .stadium-orb--burgundy {
+    top: -60px;
+    left: -40px;
+    width: 300px;
+    height: 300px;
+    background: rgba(154, 31, 61, 0.25);
+  }
+  .stadium-orb--gold {
+    top: -40px;
+    right: -40px;
+    width: 280px;
+    height: 280px;
+    background: rgba(196, 154, 58, 0.18);
+  }
+
+  /* ===== Live dot pulse ===== */
+  .live-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #C49A3A;
+    box-shadow: 0 0 0 0 rgba(196, 154, 58, 0.8);
+    animation: live-pulse 2s infinite;
+    flex-shrink: 0;
+  }
+  .live-dot--burgundy {
+    background: #9A1F3D;
+    box-shadow: 0 0 0 0 rgba(154, 31, 61, 0.8);
+    animation: live-pulse-burgundy 2s infinite;
+  }
+  @keyframes live-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(196, 154, 58, 0.7); }
+    50% { box-shadow: 0 0 0 5px rgba(196, 154, 58, 0); }
+  }
+  @keyframes live-pulse-burgundy {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(154, 31, 61, 0.7); }
+    50% { box-shadow: 0 0 0 5px rgba(154, 31, 61, 0); }
+  }
+
+  /* ===== Signal ripple (on seal) ===== */
+  .signal-ripple {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .signal-ripple i {
+    position: absolute;
+    inset: 0;
+    border: 2px solid #C49A3A;
+    border-radius: 50%;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.2);
+    animation: signal-arrive 900ms cubic-bezier(0.16, 0.8, 0.25, 1) both;
+  }
+  .signal-ripple i:nth-child(2) { animation-delay: 80ms; }
+  .signal-ripple i:nth-child(3) { animation-delay: 160ms; }
+  @keyframes signal-arrive {
+    0% { opacity: 0.9; transform: translate(-50%, -50%) scale(0.2); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(18); }
+  }
+
+  /* ===== StatBand — black ink + accent border ===== */
+  .stat-band {
+    background: #1C191C;
+    color: #f2e6d1;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-left: 4px solid #C49A3A;
+  }
+  .stat-band--burgundy { border-left-color: #9A1F3D; }
+  .stat-band--emerald { border-left-color: #4a7549; }
+  .stat-band__value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .stat-band__label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  /* ===== Provocation card — dashed border empty state ===== */
+  .provocation-card {
+    border: 2px dashed rgba(28, 25, 28, 0.3);
+    padding: 14px 16px;
+    background: rgba(0, 0, 0, 0.015);
+    text-align: center;
+  }
+  .matchday-shell .provocation-card {
+    border-color: rgba(196, 154, 58, 0.3);
+    background: rgba(196, 154, 58, 0.04);
+  }
+
+  /* ===== Pitch markings overlay ===== */
+  .pitch-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.04;
+  }
+
+  /* ===== Electric border (CSS-only, for active football bonds) ===== */
+  .electric-border {
+    position: relative;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+  }
+  .electric-border::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      var(--electric-angle, 0deg),
+      rgba(196, 154, 58, 0.6),
+      rgba(154, 31, 61, 0.4),
+      rgba(196, 154, 58, 0.6)
+    );
+    background-size: 200% 200%;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: electric-flow 4s linear infinite;
+    pointer-events: none;
+  }
+  .electric-border::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: inherit;
+    background: radial-gradient(ellipse at center, rgba(196, 154, 58, 0.08), transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+    animation: electric-glow 3.6s ease-in-out infinite;
+  }
+  @keyframes electric-flow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+  }
+  @keyframes electric-glow {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
   }
 
   /* Ribbon-styled button (notched ends) */

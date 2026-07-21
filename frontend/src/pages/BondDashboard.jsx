@@ -8,6 +8,7 @@ import RibbonButton from "@/components/RibbonButton";
 import SealLoader from "@/components/SealLoader";
 import SoccerBallLoader from "@/components/SoccerBallLoader";
 import HereWeGoStamp from "@/components/HereWeGoStamp";
+import MatchdayBackdrop from "@/components/MatchdayBackdrop";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 import { getSession, markJoined, getMyParticipantId, markWitnessed, isWitnessing } from "@/lib/session";
@@ -43,6 +44,7 @@ export default function BondDashboard() {
   const myPid = getMyParticipantId(id);
   const [prevStatus, setPrevStatus] = useState(null);
   const [showHereWeGo, setShowHereWeGo] = useState(false);
+  const [showRipple, setShowRipple] = useState(false);
 
   const load = async () => {
     try {
@@ -51,6 +53,8 @@ export default function BondDashboard() {
         if (old?.status !== b.status) {
           if (b.status === "active" && old?.status === "pending") {
             sfx.sealLock();
+            setShowRipple(true);
+            setTimeout(() => setShowRipple(false), 1200);
             if (b.category === "football") setShowHereWeGo(true);
           }
           if (b.status === "released") sfx.release();
@@ -136,6 +140,8 @@ export default function BondDashboard() {
       if (b.status === "active" && prevStatus === "pending") {
         setTimeout(() => {
           sfx.sealLock();
+          setShowRipple(true);
+          setTimeout(() => setShowRipple(false), 1200);
           if (b.category === "football") setShowHereWeGo(true);
         }, 200);
       }
@@ -256,9 +262,11 @@ export default function BondDashboard() {
   if (!bond) return <AppShell><div className="pt-10 text-center font-ui text-ink-500">Bond not found.</div></AppShell>;
 
   const t = vocab(bond.category);
+  const isFootball = bond.category === "football";
 
   return (
-    <AppShell showBack backTo="/explore">
+    <AppShell showBack backTo="/explore" className={isFootball ? "matchday-shell" : ""}>
+      {isFootball && <MatchdayBackdrop />}
       <HereWeGoStamp bond={bond} show={showHereWeGo} onDone={() => setShowHereWeGo(false)} />
       {/* Guest witness banner — shown when arriving via shared link without a session */}
       {!session?.displayName && (bond.status === "pending" || bond.status === "active") && (
@@ -311,7 +319,12 @@ export default function BondDashboard() {
       </div>
 
       {/* Hero vault */}
-      <div className="mt-6 flex flex-col items-center relative">
+      <div className={`mt-6 flex flex-col items-center relative ${isFootball && bond.status === "active" ? "electric-border rounded-2xl p-4" : ""}`}>
+        {showRipple && (
+          <div className="signal-ripple" data-testid="seal-signal-ripple">
+            <i /><i /><i />
+          </div>
+        )}
         <div className="relative" style={{ width: 320, height: 320 }}>
           <VaultSeal
             status={bond.status}
@@ -332,7 +345,8 @@ export default function BondDashboard() {
         </div>
 
         {/* Status stamp under the orbit ring \u2014 gives room to breathe */}
-        <div className="mt-10">
+        <div className="mt-10 flex items-center justify-center gap-2">
+          {isFootball && bond.status === "active" && <span className="live-dot live-dot--burgundy" data-testid="bond-live-dot" />}
           <WaxStamp
             variant={bond.status === "released" ? "gold" : bond.status === "failed" ? "ink" : "burgundy"}
             data-testid="bond-status-badge"
@@ -346,9 +360,9 @@ export default function BondDashboard() {
 
         {/* Meta strip */}
         <div className="mt-6 grid grid-cols-3 gap-2 w-full">
-          <MetaBox label="At stake" value={`$${(bond.funder_amount || 0).toLocaleString()}`} />
-          <MetaBox label={bond.category === "football" ? "Stake pool" : "Pool"} value={`$${totalPledged.toLocaleString()} / $${bond.activation_threshold.toLocaleString()}`} />
-          <MetaBox label={bond.status === "pending" ? "Time to seal" : bond.category === "football" ? "Deadline day" : "Time remaining"} value={cdText} />
+          <MetaBox label="At stake" value={`$${(bond.funder_amount || 0).toLocaleString()}`} football={isFootball} />
+          <MetaBox label={bond.category === "football" ? "Stake pool" : "Pool"} value={`$${totalPledged.toLocaleString()} / $${bond.activation_threshold.toLocaleString()}`} football={isFootball} />
+          <MetaBox label={bond.status === "pending" ? "Time to seal" : bond.category === "football" ? "Deadline day" : "Time remaining"} value={cdText} football={isFootball} />
         </div>
 
         {/* DEADLINE DAY banner — football bonds within 24h of deadline */}
@@ -466,7 +480,16 @@ export default function BondDashboard() {
           <span className="ink-divider flex-1" />
         </div>
         <div className="space-y-1" role="list" aria-label="Participant leaderboard">
-          {(bond.participants || [])
+          {(bond.participants || []).length === 0 ? (
+            <div className="provocation-card mt-2">
+              <div className="font-serif-display text-[15px] text-ink">
+                {isFootball ? "No one in the squad yet." : "No participants yet."}
+              </div>
+              <p className="font-ui text-[12px] text-ink-500 mt-1">
+                {isFootball ? "Be the first to join the squad — stake your pledge and seal the deal." : "Be the first to pledge and seal the bond."}
+              </p>
+            </div>
+          ) : (bond.participants || [])
             .slice()
             .sort((a, b) => (b.completed_tasks?.length || 0) - (a.completed_tasks?.length || 0))
             .slice(0, 8)
@@ -492,7 +515,7 @@ export default function BondDashboard() {
       </div>
 
       {/* Sticky bottom actions */}
-      <div className="fixed bottom-0 left-0 right-0 z-40" role="toolbar" aria-label="Bond actions" style={{ background: "linear-gradient(0deg, rgba(255,251,242,1) 60%, rgba(255,251,242,0))" }}>
+      <div className="fixed bottom-0 left-0 right-0 z-40" role="toolbar" aria-label="Bond actions" style={{ background: isFootball ? "linear-gradient(0deg, rgba(26,10,18,1) 60%, rgba(26,10,18,0))" : "linear-gradient(0deg, rgba(255,251,242,1) 60%, rgba(255,251,242,0))" }}>
         <div className="mx-auto w-full max-w-[460px] px-4 py-3 flex items-center gap-2">
           {bond.status === "pending" && (
             <RibbonButton
@@ -640,7 +663,15 @@ function GuestWitnessBanner({ bond, onWitness, witnessing }) {
   );
 }
 
-function MetaBox({ label, value }) {
+function MetaBox({ label, value, football = false }) {
+  if (football) {
+    return (
+      <div className="stat-band stat-band--burgundy">
+        <div className="stat-band__value font-mono-broadcast truncate">{value}</div>
+        <div className="stat-band__label">{label}</div>
+      </div>
+    );
+  }
   return (
     <div className="px-2 py-2 border border-parchment-300 bg-parchment-50">
       <div className="font-ui text-[10px] uppercase tracking-widest text-ink-500">{label}</div>

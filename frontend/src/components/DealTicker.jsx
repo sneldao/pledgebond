@@ -23,11 +23,14 @@ export default function DealTicker({ bonds = [], proofs = [] }) {
 
   return (
     <div
-      className="overflow-hidden border-y border-wax/30 py-1.5"
+      className="overflow-hidden border-y border-wax/30 py-1.5 flex items-center"
       style={{ background: "linear-gradient(90deg, rgba(155, 31, 61, 0.04) 0%, rgba(196, 154, 58, 0.04) 100%)" }}
       data-testid="deal-ticker"
     >
-      <div className="flex items-center gap-8 whitespace-nowrap" style={{ animation: "ticker-scroll 40s linear infinite" }}>
+      <span className="shrink-0 flex items-center gap-1.5 px-3 font-mono-broadcast text-[9px] uppercase tracking-widest text-wax">
+        <span className="live-dot" /> Live
+      </span>
+      <div className="flex items-center gap-8 whitespace-nowrap overflow-hidden" style={{ animation: "ticker-scroll 40s linear infinite" }}>
         {loopItems.map((item, i) => (
           <span key={i} className="font-ui text-[11.5px] text-ink-600 inline-flex items-center gap-1.5">
             <span className="text-wax">{"\uD83D\uDEA8"}</span>
