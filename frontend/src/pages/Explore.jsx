@@ -104,7 +104,7 @@ export default function Explore() {
         <div className="mt-4 ink-divider" />
 
         {loading ? (
-          <div className="space-y-4 mt-4">
+          <div className="space-y-4 mt-4" role="status" aria-label="Loading bonds">
             {[0, 1, 2].map((i) => (
               <div key={i} className="h-24 rounded bg-parchment-200 animate-pulse" />
             ))}
@@ -120,7 +120,7 @@ export default function Explore() {
             </div>
           </div>
         ) : (
-          <div className="mt-4 space-y-1">
+          <div className="mt-4 space-y-1" role="list" aria-label="Bond list">
             {filtered.map((b, idx) => (
               <BondRow key={b.id} bond={b} onOpen={() => nav(`/bond/${b.id}`)} index={idx} />
             ))}

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -9,6 +9,14 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Literal
 import uuid
 from datetime import datetime, timezone, timedelta
+
+from auth import auth_router, require_user, get_current_user, ensure_auth_indexes
+from websocket_manager import manager, ws_endpoint, emit_bond_event
+from storage import storage_router
+from payments import payments_router, ensure_payment_indexes
+from referrals import referrals_router, ensure_referral_indexes
+from leaderboards import leaderboards_router, ensure_leaderboard_indexes
+from templates import templates_router, ensure_template_indexes, seed_default_templates
 
 
 ROOT_DIR = Path(__file__).parent
@@ -275,8 +283,14 @@ async def join_bond(bond_id: str, req: JoinRequest):
     total_pledged = len(bond["participants"]) * bond["fundee_pledge_amount"]
     if bond["status"] == "pending" and total_pledged >= bond["activation_threshold"]:
         bond["status"] = "active"
+        await emit_bond_event(bond_id, "bond_activated", {"bond_id": bond_id})
 
     await _persist(bond)
+    await emit_bond_event(bond_id, "participant_joined", {
+        "bond_id": bond_id,
+        "participant": participant.model_dump(),
+        "total_participants": len(bond["participants"]),
+    })
     return bond
 
 
@@ -318,6 +332,12 @@ async def submit_proof(bond_id: str, req: ProofSubmit):
         participant["score"] = float(participant.get("score", 0)) + float(req.numeric_value)
 
     await _persist(bond)
+    await emit_bond_event(bond_id, "proof_submitted", {
+        "bond_id": bond_id,
+        "participant_id": req.participant_id,
+        "task_id": req.task_id,
+        "proof": proof.model_dump(),
+    })
     return bond
 
 
@@ -331,8 +351,10 @@ async def release_bond(bond_id: str):
         raise HTTPException(400, f"Bond is {bond['status']}, cannot release now")
     if _completion_met(bond):
         bond["status"] = "released"
+        await emit_bond_event(bond_id, "bond_released", {"bond_id": bond_id})
     else:
         bond["status"] = "failed"
+        await emit_bond_event(bond_id, "bond_failed", {"bond_id": bond_id})
     await _persist(bond)
     return bond
 
@@ -508,6 +530,27 @@ async def _seed_bonds():
 
 
 app.include_router(api_router)
+app.include_router(auth_router)
+app.include_router(payments_router)
+app.include_router(referrals_router)
+app.include_router(leaderboards_router)
+app.include_router(templates_router)
+app.include_router(storage_router)
+app.include_router(payments_router)
+
+
+@app.websocket("/ws/bonds/{bond_id}")
+async def bond_websocket(websocket: WebSocket, bond_id: str, token: Optional[str] = None):
+    user_id = None
+    if token:
+        try:
+            from auth import decode_token
+            payload = decode_token(token)
+            user_id = payload.get("sub")
+        except Exception:
+            pass
+    await ws_endpoint(websocket, bond_id, db, user_id)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -527,9 +570,12 @@ logger = logging.getLogger(__name__)
 @app.on_event("startup")
 async def on_startup():
     try:
+        await ensure_auth_indexes(db)
+        await ensure_payment_indexes(db)
+        await ensure_referral_indexes(db)
         await _seed_bonds()
     except Exception as e:
-        logger.exception("Seeding failed: %s", e)
+        logger.exception("Startup failed: %s", e)
 
 
 @app.on_event("shutdown")

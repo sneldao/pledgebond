@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getAuthHeader } from "./auth";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
@@ -7,6 +8,13 @@ const client = axios.create({
   baseURL: API,
   headers: { "Content-Type": "application/json" },
   timeout: 15000,
+});
+
+// Add auth headers to all requests
+client.interceptors.request.use((config) => {
+  const authHeaders = getAuthHeader();
+  Object.assign(config.headers, authHeaders);
+  return config;
 });
 
 export const api = {
@@ -41,5 +49,40 @@ export const api = {
   deleteBond: async (id) => {
     const { data } = await client.delete(`/bonds/${id}`);
     return data;
+  },
+  // Auth endpoints
+  auth: {
+    register: async (body) => {
+      const { data } = await client.post("/auth/register", body);
+      return data;
+    },
+    login: async (body) => {
+      const { data } = await client.post("/auth/login", body);
+      return data;
+    },
+    sendMagicLink: async (email) => {
+      const { data } = await client.post("/auth/magic-link/send", { email });
+      return data;
+    },
+    verifyMagicLink: async (token, email) => {
+      const { data } = await client.post("/auth/magic-link/verify?token=" + encodeURIComponent(token) + "&email=" + encodeURIComponent(email));
+      return data;
+    },
+    refresh: async (refreshToken) => {
+      const { data } = await client.post("/auth/refresh", { refresh_token: refreshToken });
+      return data;
+    },
+    getMe: async () => {
+      const { data } = await client.get("/auth/me");
+      return data;
+    },
+    updateMe: async (body) => {
+      const { data } = await client.put("/auth/me", body);
+      return data;
+    },
+    getStats: async () => {
+      const { data } = await client.get("/auth/stats");
+      return data;
+    },
   },
 };
