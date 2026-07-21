@@ -7,6 +7,11 @@
 
 @layer base {
   :root {
+    /* Motion tokens — custom easing curves (emil-design-eng) */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
     /* Core surfaces */
     --background: 40 56% 96%;
     --foreground: 300 6% 7%;
@@ -102,6 +107,41 @@
   .font-mono-broadcast {
     font-family: 'JetBrains Mono', 'DM Mono', monospace;
     letter-spacing: 0.06em;
+  }
+
+  /* Press feedback — buttons must feel responsive (emil-design-eng) */
+  .press-feedback {
+    transition: transform 160ms var(--ease-out);
+  }
+  .press-feedback:active {
+    transform: scale(0.97);
+  }
+
+  /* Entrance utilities — never animate from scale(0) */
+  .enter-fade-up {
+    opacity: 0;
+    transform: translateY(8px);
+    animation: enter-fade-up 300ms var(--ease-out) forwards;
+  }
+  @keyframes enter-fade-up {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Stagger helper — set --stagger-index on children */
+  .stagger-item {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+    animation: stagger-enter 320ms var(--ease-out) forwards;
+    animation-delay: calc(var(--stagger-index, 0) * 60ms);
+  }
+  @keyframes stagger-enter {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Touch-device hover guard */
+  @media (hover: none) or (pointer: coarse) {
+    .hover-only { transition: none !important; }
+    .hover-only:hover { transform: none !important; }
   }
 
   /* Parchment overlays */
@@ -355,7 +395,7 @@
     transform: translateY(-1px);
     box-shadow: 0 14px 34px rgba(123,23,48,0.36), inset 0 1px 0 rgba(255,255,255,0.14);
   }
-  .ribbon-btn:active { transform: translateY(0); }
+  .ribbon-btn:active { transform: translateY(0) scale(0.97); }
 
   .ribbon-btn-gold {
     background: linear-gradient(180deg, #C49A3A 0%, #8E6A1F 100%);
