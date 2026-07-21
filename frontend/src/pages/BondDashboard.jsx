@@ -7,9 +7,11 @@ import WaxStamp from "@/components/WaxStamp";
 import RibbonButton from "@/components/RibbonButton";
 import SealLoader from "@/components/SealLoader";
 import SoccerBallLoader from "@/components/SoccerBallLoader";
+import HereWeGoStamp from "@/components/HereWeGoStamp";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 import { getSession, markJoined, getMyParticipantId, markWitnessed, isWitnessing } from "@/lib/session";
+import { vocab } from "@/lib/footballVocab";
 import { sfx, unlockAudio } from "@/lib/sound";
 import { toast } from "sonner";
 import { Check, Trophy, Share2, ScrollText, Sparkles, Eye, Copy, Download, X } from "lucide-react";
@@ -40,13 +42,17 @@ export default function BondDashboard() {
   const [tick, setTick] = useState(0);
   const myPid = getMyParticipantId(id);
   const [prevStatus, setPrevStatus] = useState(null);
+  const [showHereWeGo, setShowHereWeGo] = useState(false);
 
   const load = async () => {
     try {
       const b = await api.getBond(id);
       setBond((old) => {
         if (old?.status !== b.status) {
-          if (b.status === "active" && old?.status === "pending") sfx.sealLock();
+          if (b.status === "active" && old?.status === "pending") {
+            sfx.sealLock();
+            if (b.category === "football") setShowHereWeGo(true);
+          }
           if (b.status === "released") sfx.release();
           if (b.status === "failed") sfx.fail();
         }
@@ -80,6 +86,9 @@ export default function BondDashboard() {
   const pledgeRatio = bond ? Math.min(1, totalPledged / Math.max(1, bond.activation_threshold || 1)) : 0;
 
   const { text: cdText } = bond ? fmtCountdown(bond.deadline) : { text: "" };
+  const deadlineMs = bond ? new Date(bond.deadline).getTime() : 0;
+  const hoursToDeadline = bond ? (deadlineMs - Date.now()) / 3600000 : 999;
+  const isDeadlineDay = bond?.category === "football" && hoursToDeadline > 0 && hoursToDeadline < 24 && bond.status === "active";
   const deadlineRatio = useMemo(() => {
     if (!bond) return 0;
     const createdMs = new Date(bond.created_at).getTime();
@@ -125,7 +134,10 @@ export default function BondDashboard() {
       setBond(b);
       toast.success("Your mark is witnessed.", { description: `You pledged $${b.fundee_pledge_amount}.` });
       if (b.status === "active" && prevStatus === "pending") {
-        setTimeout(() => sfx.sealLock(), 200);
+        setTimeout(() => {
+          sfx.sealLock();
+          if (b.category === "football") setShowHereWeGo(true);
+        }, 200);
       }
     } catch (e) {
       toast.error("Could not join", { description: e?.response?.data?.detail || e.message });
@@ -179,11 +191,20 @@ export default function BondDashboard() {
   const shareNative = async () => {
     const url = window.location.href;
     const cardUrl = api.bondCardUrl(id);
+    const isFootball = bond.category === "football";
+    const squadCount = bond.participants?.length || 0;
+    const funderName = bond.funder_name || "Anonymous";
+
+    // Fabrizio-style share text for football bonds
+    const shareText = isFootball
+      ? `\uD83D\uDEA8 HERE WE GO! ${bond.title?.replace(/^HERE WE GO:\s*/, "") || "A pledge is sealed"}. ${squadCount} in the squad. Stake: $${bond.funder_amount?.toLocaleString()}. Deadline day: ${new Date(bond.deadline).toLocaleDateString()}. Witness the vow \u2192`
+      : `Witness this pledge: ${bond.title}. ${squadCount} participants. ${funderName} staked $${bond.funder_amount?.toLocaleString()}. Deadline: ${new Date(bond.deadline).toLocaleDateString()}.`;
+
     if (navigator.share) {
       try {
         await navigator.share({
-          title: bond.title,
-          text: `Witness this pledge: ${bond.title}`,
+          title: isFootball ? `\uD83D\uDEA8 HERE WE GO! ${bond.title}` : bond.title,
+          text: shareText,
           url,
         });
       } catch {
@@ -191,10 +212,10 @@ export default function BondDashboard() {
       }
     } else {
       try {
-        await navigator.clipboard.writeText(url);
-        toast.success("Link copied to clipboard");
+        await navigator.clipboard.writeText(`${shareText} ${url}`);
+        toast.success("Fabrizio-style share text copied!", { description: "Paste it on Twitter/X or WhatsApp." });
       } catch {
-        toast.error("Could not copy link");
+        toast.error("Could not copy");
       }
     }
   };
@@ -215,8 +236,17 @@ export default function BondDashboard() {
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
-      toast.success("Link copied to clipboard");
+      const isFootball = bond.category === "football";
+      const url = window.location.href;
+      if (isFootball) {
+        const squadCount = bond.participants?.length || 0;
+        const shareText = `\uD83D\uDEA8 HERE WE GO! ${bond.title?.replace(/^HERE WE GO:\s*/, "")}. ${squadCount} in the squad. Deadline day: ${new Date(bond.deadline).toLocaleDateString()}. Witness the vow \u2192 ${url}`;
+        await navigator.clipboard.writeText(shareText);
+        toast.success("Fabrizio-style text copied!", { description: "Paste on Twitter/X or WhatsApp." });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copied to clipboard");
+      }
     } catch {
       toast.error("Could not copy");
     }
@@ -225,8 +255,11 @@ export default function BondDashboard() {
   if (loading) return <AppShell><SealLoader label="Opening the vault..." /></AppShell>;
   if (!bond) return <AppShell><div className="pt-10 text-center font-ui text-ink-500">Bond not found.</div></AppShell>;
 
+  const t = vocab(bond.category);
+
   return (
     <AppShell showBack backTo="/explore">
+      <HereWeGoStamp bond={bond} show={showHereWeGo} onDone={() => setShowHereWeGo(false)} />
       {/* Guest witness banner — shown when arriving via shared link without a session */}
       {!session?.displayName && (bond.status === "pending" || bond.status === "active") && (
         <GuestWitnessBanner
@@ -304,19 +337,40 @@ export default function BondDashboard() {
             variant={bond.status === "released" ? "gold" : bond.status === "failed" ? "ink" : "burgundy"}
             data-testid="bond-status-badge"
           >
-            {bond.status === "pending" && "Awaiting Seal"}
-            {bond.status === "active" && "Sealed \u00B7 Active"}
-            {bond.status === "released" && "Bond Released"}
-            {bond.status === "failed" && "Bond Broken"}
+            {bond.status === "pending" && t.pending}
+            {bond.status === "active" && t.sealedActive}
+            {bond.status === "released" && t.released}
+            {bond.status === "failed" && t.failed}
           </WaxStamp>
         </div>
 
         {/* Meta strip */}
         <div className="mt-6 grid grid-cols-3 gap-2 w-full">
           <MetaBox label="At stake" value={`$${(bond.funder_amount || 0).toLocaleString()}`} />
-          <MetaBox label="Pool" value={`$${totalPledged.toLocaleString()} / $${bond.activation_threshold.toLocaleString()}`} />
-          <MetaBox label={bond.status === "pending" ? "Time to seal" : "Time remaining"} value={cdText} />
+          <MetaBox label={bond.category === "football" ? "Stake pool" : "Pool"} value={`$${totalPledged.toLocaleString()} / $${bond.activation_threshold.toLocaleString()}`} />
+          <MetaBox label={bond.status === "pending" ? "Time to seal" : bond.category === "football" ? "Deadline day" : "Time remaining"} value={cdText} />
         </div>
+
+        {/* DEADLINE DAY banner — football bonds within 24h of deadline */}
+        {isDeadlineDay && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mt-4 p-3 border-2 border-wax text-center"
+            style={{
+              background: "linear-gradient(180deg, rgba(155, 31, 61, 0.08) 0%, rgba(196, 154, 58, 0.08) 100%)",
+              animation: "deadline-pulse 2s ease-in-out infinite",
+            }}
+            data-testid="deadline-day-banner"
+          >
+            <div className="font-ui text-[11px] uppercase tracking-[0.3em] text-wax">
+              {"\uD83D\uDEA8 DEADLINE DAY \uD83D\uDEA8"}
+            </div>
+            <div className="font-serif-display text-[16px] text-ink mt-1">
+              {Math.floor(hoursToDeadline)}h {Math.floor((hoursToDeadline % 1) * 60)}m left — the squad needs to finish
+            </div>
+          </motion.div>
+        )}
 
         {/* Witness strip — zero-friction observers */}
         {(bond.status === "pending" || bond.status === "active") && (
@@ -326,10 +380,10 @@ export default function BondDashboard() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-serif-display text-[15px] text-ink leading-tight">
-                {bond.witnesses?.length || 0} {bond.witnesses?.length === 1 ? "witness" : "witnesses"} watching
+                {t.witnessCount(bond.witnesses?.length || 0)}
               </div>
               <div className="font-ui text-[11px] text-ink-500">
-                {alreadyWitnessing ? "You're witnessing — we'll notify you on updates." : "Watch without pledging. Get notified on proof + release."}
+                {alreadyWitnessing ? "You're in the crew — we'll notify you on updates." : "Watch without pledging. Get notified on proof + release."}
               </div>
             </div>
             {!alreadyJoined && !alreadyWitnessing && (
@@ -339,7 +393,7 @@ export default function BondDashboard() {
                 data-testid="bond-witness-button"
                 className="shrink-0 px-3 py-2 text-[12px] font-ui border border-emerald-800 text-emerald-800 hover:bg-emerald-800 hover:text-parchment transition-colors disabled:opacity-50"
               >
-                {witnessing ? "..." : "Witness"}
+                {witnessing ? "..." : t.witness}
               </button>
             )}
             {alreadyWitnessing && (
@@ -408,7 +462,7 @@ export default function BondDashboard() {
       {/* Leaderboard (top 5) */}
       <div className="mt-8">
         <div className="flex items-center gap-2 mb-2">
-          <h2 className="font-serif-display text-[20px] text-ink">Witness ledger</h2>
+          <h2 className="font-serif-display text-[20px] text-ink">{bond.category === "football" ? "The squad" : "Witness ledger"}</h2>
           <span className="ink-divider flex-1" />
         </div>
         <div className="space-y-1" role="list" aria-label="Participant leaderboard">
@@ -449,7 +503,7 @@ export default function BondDashboard() {
               data-testid="bond-dashboard-join-button"
               style={{ opacity: alreadyJoined ? 0.6 : 1 }}
             >
-              {alreadyJoined ? "Mark witnessed \u2713" : joining ? "Pressing wax..." : `Pledge $${bond.fundee_pledge_amount} & Join`}
+              {alreadyJoined ? "Mark witnessed \u2713" : joining ? "Pressing wax..." : bond.category === "football" ? `Stake $${bond.fundee_pledge_amount} & Join the squad` : `Pledge $${bond.fundee_pledge_amount} & Join`}
             </RibbonButton>
           )}
           {bond.status === "active" && (
@@ -611,7 +665,7 @@ function TaskRow({ task, bond, myPid, onSubmit, index }) {
           <WaxStamp variant="gold" className="text-[9px] shrink-0">{task.verification.replace("_", " ")}</WaxStamp>
         </div>
         <div className="font-ui text-[11.5px] text-ink-500 mt-0.5">
-          {totalDone}/{bond.participants.length} witnessed · {task.task_type.replace("_", " ")}
+          {totalDone}/{bond.participants.length} {bond.category === "football" ? "done" : "witnessed"} · {task.task_type.replace("_", " ")}
           {task.target ? ` · target ${task.target}${task.unit ? " " + task.unit : ""}` : ""}
         </div>
       </div>

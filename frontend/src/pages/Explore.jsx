@@ -5,6 +5,7 @@ import VaultSeal from "@/components/VaultSeal";
 import WaxStamp from "@/components/WaxStamp";
 import RibbonButton from "@/components/RibbonButton";
 import SealLoader from "@/components/SealLoader";
+import DealTicker from "@/components/DealTicker";
 import { api } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { motion } from "framer-motion";
@@ -15,6 +16,13 @@ const STATUS_LABELS = {
   active: "Sealed \u00B7 Active",
   released: "Released",
   failed: "Broken",
+};
+
+const FOOTBALL_STATUS_LABELS = {
+  pending: "Deal Pending",
+  active: "Deal Sealed",
+  released: "Deal Done",
+  failed: "Deal Off",
 };
 
 function fmtDeadline(iso) {
@@ -87,6 +95,9 @@ export default function Explore() {
             <span className="inline-flex items-center gap-1"><Plus size={14} /> Draft a Pledge</span>
           </button>
         </div>
+
+        {/* Deal ticker — Fabrizio-style scrolling activity feed */}
+        {!loading && <DealTicker bonds={bonds} proofs={proofs} />}
 
         {/* Tab toggle — Bonds vs Proof feed */}
         <div className="mt-5 flex items-center gap-1 border-b border-parchment-300">
@@ -301,19 +312,19 @@ function BondRow({ bond, onOpen, index }) {
             variant={bond.status === "released" ? "gold" : bond.status === "failed" ? "ink" : "burgundy"}
             className="shrink-0"
           >
-            {STATUS_LABELS[bond.status]}
+            {(bond.category === "football" ? FOOTBALL_STATUS_LABELS : STATUS_LABELS)[bond.status]}
           </WaxStamp>
         </div>
         <p className="font-ui text-[12.5px] text-ink-600 mt-1 line-clamp-2">{bond.description}</p>
         <div className="flex items-center gap-3 mt-2 text-[11.5px] font-ui text-ink-500">
           <span className="inline-flex items-center gap-1">
             <Clock size={12} />
-            {fmtDeadline(bond.deadline)}
+            {bond.category === "football" ? "Deadline day" : "Deadline"}: {fmtDeadline(bond.deadline)}
           </span>
           <span>•</span>
           <span>${(bond.funder_amount || 0).toLocaleString()} at stake</span>
           <span>•</span>
-          <span>{bond.participants?.length || 0} witnesses</span>
+          <span>{bond.category === "football" ? `${bond.participants?.length || 0} in the squad` : `${bond.participants?.length || 0} witnesses`}</span>
         </div>
       </div>
     </motion.button>
