@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
+import CategoryMotif from "@/components/CategoryMotif";
 
 const TASK_TEMPLATES = [
   { title: "Hula hoop duration (minutes)", task_type: "timed_ranked", verification: "numeric", target: 60, unit: "min" },
@@ -32,6 +33,7 @@ const STEPS = [
 // Contest template — pre-fills the form for the self-referential contest bond
 const CONTEST_TEMPLATE = {
   title: "Ship My Contest Entry by Deadline",
+  category: "project",
   description: "I pledge to ship and submit my Fabrizio Romano x Emergent Builder's Contest entry before the deadline. Witnesses hold me accountable — no last-minute excuses.",
   cause_name: "Builder's Contest $100K Prize Pool",
   funder_amount: 1000,
@@ -81,7 +83,7 @@ const FOOTBALL_TEMPLATE = {
 // Fitness template — general 30-day fitness pledge
 const FITNESS_TEMPLATE = {
   title: "30-Day Fitness Pledge",
-  category: "individual",
+  category: "fitness",
   description: "Pledge to hit your fitness goal in 30 days — run 5K, hit the gym 3x/week, or beat your personal best. Your crew witnesses every check-in. Miss the deadline and everyone sees the L.",
   cause_name: "Community Wellness Fund",
   funder_amount: 1500,
@@ -308,7 +310,10 @@ function TextArea(props) {
 function BasicsStep({ form, set }) {
   return (
     <div>
-      <h2 className="font-serif-display text-[24px] text-ink">Set the stage</h2>
+      <div className="flex items-center gap-3 mb-1">
+        <CategoryMotif category={form.category || "custom"} size="medium" />
+        <h2 className="font-serif-display text-[24px] text-ink">Set the stage</h2>
+      </div>
       <p className="font-ui text-[12.5px] text-ink-500 mb-4">Give this bond a title, a purpose, and a cause it serves.</p>
       <Field label="Bond title" hint="e.g. '5-Hour Hula Hoop Endurance'">
         <Input value={form.title} onChange={(e) => set("title", e.target.value)} data-testid="create-title-input" placeholder="Name your challenge..." />
@@ -320,15 +325,16 @@ function BasicsStep({ form, set }) {
         <Field label="Category">
           <div className="flex gap-1">
             {[
-              { k: "individual", label: "Individual" },
-              { k: "corporate", label: "Corporate" },
               { k: "football", label: "\u26BD Football" },
+              { k: "fitness", label: "Fitness" },
+              { k: "project", label: "Project" },
+              { k: "custom", label: "Custom" },
             ].map((o) => (
               <button
                 key={o.k}
                 onClick={() => set("category", o.k)}
                 data-testid={`create-category-${o.k}`}
-                className={`flex-1 px-2 py-2 border text-[13px] font-ui ${form.category === o.k ? "bg-ink text-parchment border-ink" : "bg-transparent text-ink border-parchment-300"}`}
+                className={`flex-1 px-2 py-2 border text-[13px] font-ui flex items-center justify-center gap-1 ${form.category === o.k ? "bg-ink text-parchment border-ink" : "bg-transparent text-ink border-parchment-300"}`}
               >
                 {o.label}
               </button>

@@ -377,6 +377,110 @@
     50% { opacity: 0.8; }
   }
 
+  /* ===== Category motif animations ===== */
+  .category-motif svg { overflow: visible; }
+  .category-motif--static * { animation: none !important; }
+
+  /* Football: ball rolls, streaks pulse */
+  .motif-football-ball {
+    animation: motif-football-roll 2.5s linear infinite;
+    transform-origin: 28px 24px;
+  }
+  @keyframes motif-football-roll {
+    0% { transform: translate(28px, 24px) rotate(0deg); }
+    100% { transform: translate(28px, 24px) rotate(360deg); }
+  }
+  .motif-football-streaks {
+    animation: motif-streak-pulse 1.8s ease-in-out infinite;
+  }
+
+  /* Fitness: shoe bobs, streaks slide */
+  .motif-fitness-shoe {
+    animation: motif-fitness-bob 1.6s ease-in-out infinite;
+  }
+  @keyframes motif-fitness-bob {
+    0%, 100% { transform: translate(14px, 14px); }
+    50% { transform: translate(14px, 12px); }
+  }
+  .motif-fitness-streaks {
+    animation: motif-streak-slide 1.2s linear infinite;
+  }
+  @keyframes motif-streak-slide {
+    0% { opacity: 0.15; transform: translateX(0); }
+    50% { opacity: 0.5; }
+    100% { opacity: 0.15; transform: translateX(4px); }
+  }
+  @keyframes motif-streak-pulse {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Project: rocket hovers, flame flickers, smoke puffs */
+  .motif-project-rocket {
+    animation: motif-rocket-hover 2s ease-in-out infinite;
+  }
+  @keyframes motif-rocket-hover {
+    0%, 100% { transform: translate(24px, 20px); }
+    50% { transform: translate(24px, 18px); }
+  }
+  .motif-project-flame {
+    animation: motif-flame-flicker 0.4s ease-in-out infinite alternate;
+    transform-origin: center top;
+  }
+  @keyframes motif-flame-flicker {
+    0% { transform: scaleY(1); opacity: 0.9; }
+    100% { transform: scaleY(1.3); opacity: 1; }
+  }
+  .motif-project-smoke {
+    animation: motif-smoke-puff 2s ease-in-out infinite;
+  }
+  @keyframes motif-smoke-puff {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Custom: sparkles twinkle */
+  .motif-custom-main {
+    animation: motif-sparkle-main 2s ease-in-out infinite;
+    transform-origin: 24px 24px;
+  }
+  @keyframes motif-sparkle-main {
+    0%, 100% { transform: translate(24px, 24px) scale(1) rotate(0deg); opacity: 1; }
+    50% { transform: translate(24px, 24px) scale(1.15) rotate(45deg); opacity: 0.8; }
+  }
+  .motif-custom-small1 { animation: motif-twinkle 1.8s ease-in-out infinite; }
+  .motif-custom-small2 { animation: motif-twinkle 2.2s ease-in-out infinite 0.3s; }
+  .motif-custom-small3 { animation: motif-twinkle 1.5s ease-in-out infinite 0.6s; }
+  @keyframes motif-twinkle {
+    0%, 100% { opacity: 0.3; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.1); }
+  }
+
+  /* ===== Empty state illustrations ===== */
+  .empty-illustration {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 16px;
+  }
+  .empty-illustration svg {
+    opacity: 0.5;
+    animation: empty-float 3s ease-in-out infinite;
+  }
+  @keyframes empty-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  /* ===== Custom icon set (wax/seal themed) ===== */
+  .pb-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
   /* Ribbon-styled button (notched ends) */
   .ribbon-btn {
     position: relative;

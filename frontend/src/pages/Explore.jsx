@@ -6,6 +6,7 @@ import WaxStamp from "@/components/WaxStamp";
 import RibbonButton from "@/components/RibbonButton";
 import SealLoader from "@/components/SealLoader";
 import DealTicker from "@/components/DealTicker";
+import EmptyStateIllustration from "@/components/EmptyStateIllustration";
 import { api } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { motion } from "framer-motion";
@@ -178,8 +179,7 @@ export default function Explore() {
               </div>
             ) : filtered.length === 0 ? (
               <div className="ornate-frame mt-6 py-10 px-6 text-center">
-                <div className="font-serif-display text-[22px] text-ink">No open bonds under this seal.</div>
-                <p className="font-ui text-[13px] text-ink-600 mt-2">Draft the first pledge and let others gather.</p>
+                <EmptyStateIllustration type="ledger" caption="No open bonds under this seal. Draft the first pledge and let others gather." />
                 <div className="mt-4 flex justify-center">
                   <RibbonButton onClick={() => nav("/create")} data-testid="explore-empty-create-button">
                     Draft a Pledge
@@ -219,10 +219,7 @@ function ProofFeed({ proofs, loading, onOpen }) {
   if (proofs.length === 0) {
     return (
       <div className="ornate-frame mt-6 py-10 px-6 text-center">
-        <div className="font-serif-display text-[22px] text-ink">No proofs logged yet.</div>
-        <p className="font-ui text-[13px] text-ink-600 mt-2">
-          When fundees log clauses, their proof appears here for all witnesses to see.
-        </p>
+        <EmptyStateIllustration type="proofs" caption="No proofs logged yet. When fundees log clauses, their proof appears here for all witnesses to see." />
       </div>
     );
   }

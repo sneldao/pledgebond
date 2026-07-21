@@ -6,6 +6,7 @@ import RibbonButton from "@/components/RibbonButton";
 import WaxStamp from "@/components/WaxStamp";
 import AmbientBackdrop from "@/components/AmbientBackdrop";
 import SoccerBallLoader from "@/components/SoccerBallLoader";
+import CategoryMotif from "@/components/CategoryMotif";
 import { setSession, getSession } from "@/lib/session";
 import { sfx, unlockAudio } from "@/lib/sound";
 import { api } from "@/lib/api";
@@ -300,7 +301,7 @@ export default function Landing() {
                       whileHover={{ y: -2 }}
                       whileTap={{ scale: 0.97 }}
                     >
-                      <span className="text-[22px]">{g.icon}</span>
+                      <CategoryMotif category={g.key} size="small" />
                       <span className="font-serif-display text-[16px] text-ink leading-tight">{g.label}</span>
                       <span className="font-ui text-[11px] text-ink-500">{g.sub}</span>
                     </motion.button>
@@ -338,7 +339,7 @@ export default function Landing() {
 
                 {/* Selected goal recap */}
                 <div className="flex items-center gap-2 mb-4 px-3 py-2 border border-parchment-300 bg-parchment-50">
-                  <span className="text-[20px]">{selectedGoal?.icon}</span>
+                  <CategoryMotif category={selectedGoal?.key} size="small" />
                   <div>
                     <div className="font-serif-display text-[15px] text-ink leading-tight">{selectedGoal?.label}</div>
                     <div className="font-ui text-[10px] text-ink-500">{selectedGoal?.sub}</div>

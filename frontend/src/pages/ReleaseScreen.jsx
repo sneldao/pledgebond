@@ -14,6 +14,7 @@ import { api } from "@/lib/api";
 import { sfx, unlockAudio } from "@/lib/sound";
 import { toast } from "sonner";
 import { Share2, Download, RefreshCcw, Copy, X } from "lucide-react";
+import { SealIcon, ReleaseIcon } from "@/components/PbIcons";
 
 export default function ReleaseScreen() {
   const { id } = useParams();
@@ -234,17 +235,23 @@ export default function ReleaseScreen() {
             <PayoutPockets splits={bond.payout_split || []} filled={released && finalPhase} totalAmount={bond.funder_amount + (bond.participants?.length || 0) * bond.fundee_pledge_amount} />
           </div>
 
-          {/* Result copy */}
+          {/* Result copy — short illustrated captions */}
           <div className="mt-6 text-center px-4">
             {released && (
-              <p className="font-serif-display text-[17px] text-ink leading-snug">
-                The seal cracked. The vault opened. Pledge points are dispatched to the pockets below — the ledger is sealed.
-              </p>
+              <div className="flex flex-col items-center gap-2">
+                <ReleaseIcon size={32} className="text-wax" />
+                <p className="font-serif-display text-[18px] text-ink leading-snug">
+                  The vault opened. Pledge points dispatched.
+                </p>
+              </div>
             )}
             {failed && (
-              <p className="font-serif-display italic text-[16px] text-wax leading-snug">
-                Conditions unmet. The bond remains sealed. The vault fades, quiet as a shut ledger.
-              </p>
+              <div className="flex flex-col items-center gap-2">
+                <SealIcon size={32} className="text-wax" />
+                <p className="font-serif-display italic text-[16px] text-wax leading-snug">
+                  The vault stays shut. The L is sealed.
+                </p>
+              </div>
             )}
             {!released && !failed && (
               <p className="font-serif-display italic text-[15px] text-ink-600">Press the seal to attempt release.</p>

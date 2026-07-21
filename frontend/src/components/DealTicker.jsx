@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { tickerText } from "@/lib/categoryVocab";
 
 /**
  * DealTicker — a thin scrolling ticker at the top of Explore showing
@@ -57,44 +58,42 @@ function buildTickerItems(bonds, proofs) {
   for (const p of proofs.slice(0, 8)) {
     const bond = bonds.find((b) => b.id === p.bond_id);
     if (!bond) continue;
-    const isFootball = bond.category === "football";
     const name = p.participant_name || p.display_name || "Someone";
     const taskTitle = p.task_title || "a clause";
     const ago = timeAgo(p.submitted_at || p.created_at, now);
+    const prefix = bond.category === "football" ? "\uD83D\uDEA8" : bond.category === "fitness" ? "\uD83C\uDFC3" : bond.category === "project" ? "\uD83D\uDE80" : "\uD83D\uDCDC";
     items.push({
-      text: isFootball
-        ? `${firstName(name)} logged ${taskTitle.toLowerCase()}`
-        : `${firstName(name)} submitted proof: ${taskTitle.toLowerCase()}`,
+      text: `${prefix} ${firstName(name)} logged ${taskTitle.toLowerCase()}`,
       timeAgo: ago,
     });
   }
 
-  // From bonds — deadline day warnings for football bonds
+  // From bonds — deadline warnings for active bonds
   for (const b of bonds) {
-    if (b.category !== "football" || b.status !== "active") continue;
+    if (b.status !== "active") continue;
     const hoursLeft = (new Date(b.deadline).getTime() - now) / 3600000;
     if (hoursLeft > 0 && hoursLeft < 48) {
+      const t = tickerText({ category: b.category, display_name: b.funder_name, type: "default" });
       items.push({
-        text: `${firstName(b.funder_name || "Someone")}'s deadline day in ${Math.floor(hoursLeft)}h`,
+        text: `${firstName(b.funder_name || "Someone")}'s ${b.category === "football" ? "deadline day" : b.category === "fitness" ? "finish line" : b.category === "project" ? "launch day" : "deadline"} in ${Math.floor(hoursLeft)}h`,
         timeAgo: null,
       });
     }
   }
 
-  // From bonds — recently sealed deals
+  // From bonds — recently sealed
   for (const b of bonds) {
-    if (b.category !== "football") continue;
     if (b.status === "active") {
       const createdAgo = timeAgo(b.created_at, now);
       if (createdAgo && createdAgo !== "just now") {
         items.push({
-          text: `${firstName(b.funder_name || "Someone")} sealed a pledge: ${b.title?.replace(/^HERE WE GO:\s*/, "").slice(0, 30)}`,
+          text: tickerText({ category: b.category, display_name: b.funder_name, type: "sealed" }),
           timeAgo: createdAgo,
         });
       }
     } else if (b.status === "released") {
       items.push({
-        text: `${firstName(b.funder_name || "Someone")}'s deal is done — vault opened`,
+        text: tickerText({ category: b.category, display_name: b.funder_name, type: "released" }),
         timeAgo: timeAgo(b.created_at, now),
       });
     }

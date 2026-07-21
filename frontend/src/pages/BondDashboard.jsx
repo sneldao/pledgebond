@@ -9,13 +9,15 @@ import SealLoader from "@/components/SealLoader";
 import SoccerBallLoader from "@/components/SoccerBallLoader";
 import HereWeGoStamp from "@/components/HereWeGoStamp";
 import MatchdayBackdrop from "@/components/MatchdayBackdrop";
+import EmptyStateIllustration from "@/components/EmptyStateIllustration";
+import { PledgeIcon, WitnessIcon, SealIcon, ReleaseIcon, ProofIcon, SquadIcon, DeadlineIcon, StakeIcon } from "@/components/PbIcons";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 import { getSession, markJoined, getMyParticipantId, markWitnessed, isWitnessing } from "@/lib/session";
-import { vocab } from "@/lib/footballVocab";
+import { vocab } from "@/lib/categoryVocab";
 import { sfx, unlockAudio } from "@/lib/sound";
 import { toast } from "sonner";
-import { Check, Trophy, Share2, ScrollText, Sparkles, Eye, Copy, Download, X } from "lucide-react";
+import { Check, Trophy, Share2, Copy, Download, X } from "lucide-react";
 
 function fmtCountdown(iso) {
   const dt = new Date(iso).getTime();
@@ -390,7 +392,7 @@ export default function BondDashboard() {
         {(bond.status === "pending" || bond.status === "active") && (
           <div className="mt-4 w-full ornate-frame p-3 flex items-center gap-3">
             <div className="shrink-0 w-10 h-10 rounded-full bg-emerald-800/10 border border-emerald-800/30 flex items-center justify-center text-emerald-800">
-              <Eye size={18} />
+              <WitnessIcon size={18} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-serif-display text-[15px] text-ink leading-tight">
@@ -456,7 +458,10 @@ export default function BondDashboard() {
       {/* Clauses */}
       <div className="mt-6">
         <div className="flex items-center gap-2 mb-2">
-          <h2 className="font-serif-display text-[20px] text-ink">Clauses of the bond</h2>
+          <h2 className="font-serif-display text-[20px] text-ink flex items-center gap-2">
+            <ProofIcon size={16} className="text-wax" />
+            Clauses of the bond
+          </h2>
           <span className="ink-divider flex-1" />
         </div>
         <div className="divide-y divide-parchment-300">
@@ -476,19 +481,18 @@ export default function BondDashboard() {
       {/* Leaderboard (top 5) */}
       <div className="mt-8">
         <div className="flex items-center gap-2 mb-2">
-          <h2 className="font-serif-display text-[20px] text-ink">{bond.category === "football" ? "The squad" : "Witness ledger"}</h2>
+          <h2 className="font-serif-display text-[20px] text-ink flex items-center gap-2">
+            <SquadIcon size={16} className="text-wax" />
+            {t.participants === "squad" ? "The squad" : t.participants === "the pack" ? "The pack" : t.participants === "the crew" ? "The crew" : "Witness ledger"}
+          </h2>
           <span className="ink-divider flex-1" />
         </div>
         <div className="space-y-1" role="list" aria-label="Participant leaderboard">
           {(bond.participants || []).length === 0 ? (
-            <div className="provocation-card mt-2">
-              <div className="font-serif-display text-[15px] text-ink">
-                {isFootball ? "No one in the squad yet." : "No participants yet."}
-              </div>
-              <p className="font-ui text-[12px] text-ink-500 mt-1">
-                {isFootball ? "Be the first to join the squad — stake your pledge and seal the deal." : "Be the first to pledge and seal the bond."}
-              </p>
-            </div>
+            <EmptyStateIllustration
+              type={isFootball ? "bleachers" : "chairs"}
+              caption={t.emptyParticipants + " " + t.emptyParticipantsHint}
+            />
           ) : (bond.participants || [])
             .slice()
             .sort((a, b) => (b.completed_tasks?.length || 0) - (a.completed_tasks?.length || 0))
@@ -541,7 +545,7 @@ export default function BondDashboard() {
                 </RibbonButton>
               )}
               <RibbonButton variant="gold" className="flex-1" onClick={goRelease} data-testid="bond-dashboard-check-release-button">
-                <Sparkles size={14} className="inline mr-1" /> Attempt Release
+                <ReleaseIcon size={14} className="inline mr-1" /> Attempt Release
               </RibbonButton>
             </>
           )}
@@ -551,7 +555,7 @@ export default function BondDashboard() {
                 <Trophy size={14} className="inline mr-1" /> View the {bond.status === "released" ? "release" : "outcome"}
               </RibbonButton>
               <RibbonButton variant="ghost" className="flex-1" onClick={() => nav("/explore")} data-testid="bond-dashboard-back-to-explore">
-                <ScrollText size={14} className="inline mr-1" /> Browse more bonds
+                <ProofIcon size={14} className="inline mr-1" /> Browse more bonds
               </RibbonButton>
             </>
           )}
@@ -632,7 +636,7 @@ function GuestWitnessBanner({ bond, onWitness, witnessing }) {
   return (
     <div className="mt-3 ornate-frame p-4" data-testid="guest-witness-banner">
       <div className="flex items-center gap-2 mb-2">
-        <Eye size={16} className="text-emerald-800" />
+        <WitnessIcon size={16} className="text-emerald-800" />
         <span className="font-serif-display text-[16px] text-ink">You're witnessing a pledge</span>
       </div>
       <p className="font-ui text-[12px] text-ink-600 mb-3">
