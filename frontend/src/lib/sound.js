@@ -96,12 +96,15 @@ export const sfx = {
     playNoise({ duration: 0.06, peak: 0.14, bandpass: 1800 });
   },
   sealLock() {
-    // Metallic latch + wax thud
-    playTone({ freq: 880, freqEnd: 480, type: "triangle", attack: 0.002, decay: 0.09, peak: 0.28 });
+    // Stage 1: sharp metallic latch (high transient)
+    playTone({ freq: 1200, freqEnd: 520, type: "triangle", attack: 0.002, decay: 0.08, peak: 0.34 });
+    playNoise({ duration: 0.05, peak: 0.2, bandpass: 4200 });
+    // Stage 2: heavy wax thud + low resonant boom (the "irreversible" weight)
     setTimeout(() => {
-      playTone({ freq: 160, freqEnd: 60, type: "sine", attack: 0.005, decay: 0.28, peak: 0.5 });
-      playNoise({ duration: 0.16, peak: 0.28, bandpass: 320 });
-    }, 90);
+      playTone({ freq: 180, freqEnd: 50, type: "sine", attack: 0.004, decay: 0.32, peak: 0.56 });
+      playTone({ freq: 90, freqEnd: 40, type: "sine", attack: 0.006, decay: 0.5, peak: 0.4 });
+      playNoise({ duration: 0.18, peak: 0.32, bandpass: 280 });
+    }, 95);
   },
   crack() {
     // Dry snap

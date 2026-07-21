@@ -1,42 +1,70 @@
 [
   {
     "content": "Phase 1: Get design guidelines from design_agent",
-    "status": "in_progress"
+    "status": "completed"
   },
   {
-    "content": "Phase 1: Install animation/sound dependencies (framer-motion, canvas-confetti, howler)",
-    "status": "pending"
+    "content": "Phase 1: Install animation/sound dependencies",
+    "status": "completed"
   },
   {
-    "content": "Phase 1: Build Vault/Seal SVG component with state machine (Pending→Active→Released/Failed)",
-    "status": "pending"
+    "content": "Phase 1: Build Vault/Seal SVG component with state machine",
+    "status": "completed"
   },
   {
-    "content": "Phase 1: Implement audio cues (pledge-in, seal-lock, release) with mute toggle",
-    "status": "pending"
+    "content": "Phase 1: Implement audio cues with mute toggle",
+    "status": "completed"
   },
   {
-    "content": "Phase 1: Screenshot and validate vault animations on mobile viewport",
-    "status": "pending"
+    "content": "Phase 1: Screenshot and validate vault animations",
+    "status": "completed"
   },
   {
     "content": "Phase 2: Backend — FastAPI models, endpoints, seed data",
-    "status": "pending"
+    "status": "completed"
   },
   {
     "content": "Phase 2: Frontend — Landing/Role picker, Explore feed, Create Bond wizard",
-    "status": "pending"
+    "status": "completed"
   },
   {
-    "content": "Phase 2: Frontend — Bond Dashboard, Join flow, Proof submission, Release screen, Share",
-    "status": "pending"
+    "content": "Phase 2: Frontend — Bond Dashboard, Join flow, Proof submission, Release, Share",
+    "status": "completed"
   },
   {
     "content": "Phase 2: Wire full end-to-end loop with seeded bonds + new bond creation",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 3a: Pull user's GitHub push (auth, payments, WS, refs, leaderboards, templates, storage)",
+    "status": "in_progress"
+  },
+  {
+    "content": "Phase 3a: Add feature-flag system (backend env-based router mounting + frontend config endpoint)",
     "status": "pending"
   },
   {
-    "content": "Phase 3: End-to-end testing with testing_agent_v3, fix issues",
+    "content": "Phase 3a: Install new backend deps (pyjwt, bcrypt, stripe, boto3 if needed)",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 3a: Wrap auth dependencies to soft-fail when ENABLE_AUTH=0 (return demo user)",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 3a: Frontend AuthProvider + ProtectedRoute pass-through when disabled",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 3a: Verify demo still works with all flags OFF (screenshot)",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 3a: Document flag-flipping in README/plan",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 4: End-to-end testing with testing_agent_v3",
     "status": "pending"
   }
 ]

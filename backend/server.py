@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -9,6 +9,43 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Literal
 import uuid
 from datetime import datetime, timezone, timedelta
+
+from auth import auth_router, require_user, get_current_user, ensure_auth_indexes
+from websocket_manager import manager, ws_endpoint, emit_bond_event as _emit_bond_event_real
+from storage import storage_router
+from payments import payments_router, ensure_payment_indexes
+from referrals import referrals_router, ensure_referral_indexes
+from leaderboards import leaderboards_router, ensure_leaderboard_indexes
+from templates import templates_router, ensure_template_indexes, seed_default_templates
+
+
+# ============================================================
+# FEATURE FLAGS \u2014 read from env, default OFF
+# ============================================================
+def _flag(name: str, default: str = "0") -> bool:
+    return os.environ.get(name, default).strip().lower() in ("1", "true", "yes", "on")
+
+
+FEATURES = {
+    "auth": _flag("ENABLE_AUTH"),
+    "payments": _flag("ENABLE_PAYMENTS"),
+    "websockets": _flag("ENABLE_WEBSOCKETS"),
+    "referrals": _flag("ENABLE_REFERRALS"),
+    "leaderboards": _flag("ENABLE_LEADERBOARDS"),
+    "templates": _flag("ENABLE_TEMPLATES"),
+    "storage": _flag("ENABLE_STORAGE"),
+}
+
+
+async def emit_bond_event(bond_id: str, event_type: str, data: dict):
+    """No-op wrapper. Only broadcasts when websockets feature is enabled."""
+    if not FEATURES["websockets"]:
+        return
+    try:
+        await _emit_bond_event_real(bond_id, event_type, data)
+    except Exception as e:
+        # Never let ws errors break the core flow
+        logging.getLogger(__name__).warning("emit_bond_event failed: %s", e)
 
 
 ROOT_DIR = Path(__file__).parent
@@ -193,6 +230,15 @@ async def root():
     return {"message": "Pledgebond API"}
 
 
+# Public config endpoint \u2014 frontend reads this at boot to know which UI to render
+@api_router.get("/config")
+async def get_config():
+    return {
+        "features": FEATURES,
+        "demo_mode": not FEATURES["auth"],
+    }
+
+
 @api_router.get("/bonds", response_model=List[PledgeBond])
 async def list_bonds(status: Optional[str] = None, category: Optional[str] = None):
     query = {}
@@ -275,8 +321,14 @@ async def join_bond(bond_id: str, req: JoinRequest):
     total_pledged = len(bond["participants"]) * bond["fundee_pledge_amount"]
     if bond["status"] == "pending" and total_pledged >= bond["activation_threshold"]:
         bond["status"] = "active"
+        await emit_bond_event(bond_id, "bond_activated", {"bond_id": bond_id})
 
     await _persist(bond)
+    await emit_bond_event(bond_id, "participant_joined", {
+        "bond_id": bond_id,
+        "participant": participant.model_dump(),
+        "total_participants": len(bond["participants"]),
+    })
     return bond
 
 
@@ -318,6 +370,12 @@ async def submit_proof(bond_id: str, req: ProofSubmit):
         participant["score"] = float(participant.get("score", 0)) + float(req.numeric_value)
 
     await _persist(bond)
+    await emit_bond_event(bond_id, "proof_submitted", {
+        "bond_id": bond_id,
+        "participant_id": req.participant_id,
+        "task_id": req.task_id,
+        "proof": proof.model_dump(),
+    })
     return bond
 
 
@@ -331,8 +389,10 @@ async def release_bond(bond_id: str):
         raise HTTPException(400, f"Bond is {bond['status']}, cannot release now")
     if _completion_met(bond):
         bond["status"] = "released"
+        await emit_bond_event(bond_id, "bond_released", {"bond_id": bond_id})
     else:
         bond["status"] = "failed"
+        await emit_bond_event(bond_id, "bond_failed", {"bond_id": bond_id})
     await _persist(bond)
     return bond
 
@@ -509,6 +569,37 @@ async def _seed_bonds():
 
 app.include_router(api_router)
 
+# ============================================================
+# Optional routers \u2014 mounted only when their feature flag is on
+# ============================================================
+if FEATURES["auth"]:
+    app.include_router(auth_router)
+if FEATURES["payments"]:
+    app.include_router(payments_router)
+if FEATURES["referrals"]:
+    app.include_router(referrals_router)
+if FEATURES["leaderboards"]:
+    app.include_router(leaderboards_router)
+if FEATURES["templates"]:
+    app.include_router(templates_router)
+if FEATURES["storage"]:
+    app.include_router(storage_router)
+
+
+if FEATURES["websockets"]:
+    @app.websocket("/ws/bonds/{bond_id}")
+    async def bond_websocket(websocket: WebSocket, bond_id: str, token: Optional[str] = None):
+        user_id = None
+        if token and FEATURES["auth"]:
+            try:
+                from auth import decode_token
+                payload = decode_token(token)
+                user_id = payload.get("sub")
+            except Exception:
+                pass
+        await ws_endpoint(websocket, bond_id, db, user_id)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -527,9 +618,28 @@ logger = logging.getLogger(__name__)
 @app.on_event("startup")
 async def on_startup():
     try:
+        if FEATURES["auth"]:
+            await ensure_auth_indexes(db)
+        if FEATURES["payments"]:
+            await ensure_payment_indexes(db)
+        if FEATURES["referrals"]:
+            await ensure_referral_indexes(db)
+        if FEATURES["leaderboards"]:
+            try:
+                await ensure_leaderboard_indexes(db)
+            except Exception as e:
+                logger.warning("leaderboard indexes: %s", e)
+        if FEATURES["templates"]:
+            try:
+                await ensure_template_indexes(db)
+                await seed_default_templates(db)
+            except Exception as e:
+                logger.warning("template setup: %s", e)
         await _seed_bonds()
+        enabled = [k for k, v in FEATURES.items() if v]
+        logger.info("Pledgebond ready. Enabled features: %s", enabled or ["(none \u2014 demo mode)"])
     except Exception as e:
-        logger.exception("Seeding failed: %s", e)
+        logger.exception("Startup failed: %s", e)
 
 
 @app.on_event("shutdown")
