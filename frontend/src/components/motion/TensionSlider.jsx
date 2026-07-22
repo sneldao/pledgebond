@@ -3,46 +3,66 @@ import { motion } from "framer-motion";
 
 /**
  * TensionSlider - Physical tension-based stakes selector
- * 
- * Replaces raw numeric inputs with a weighted slider that provides
- * haptic feedback and visual tension cues.
- * 
+ *
+ * Uses Bond Credits instead of real money. Credits are earned by completing
+ * pledges, witnessing others, and referring users.
+ *
  * Presets:
- * - Low: Friendly wager ($500 stake, $10 pledge, 30 days)
- * - Standard: Put your money where your mouth is ($2500 stake, $25 pledge, 14 days)
- * - High: All in, no excuses ($10000 stake, $100 pledge, 7 days)
+ * - Low:      50 credits  — Bronze tier friendly wager
+ * - Standard: 500 credits — Silver tier real commitment
+ * - High:     5,000 credits — Gold/Platinum tier, all in
+ *
+ * Required reputation tiers:
+ * - Low:      Bronze (0+ credits)
+ * - Standard: Silver (100+ credits)
+ * - High:     Gold   (300+ credits)
  */
 
 const PRESETS = {
   low: {
     label: "Friendly Wager",
     description: "Low stakes, good vibes",
-    funder_amount: 500,
-    activation_threshold: 250,
-    fundee_pledge_amount: 10,
+    funder_amount: 50,           // Bond Credits
+    activation_threshold: 25,
+    fundee_pledge_amount: 5,
     days_until_deadline: 30,
-    color: "#1F6B4E", // emerald
+    color: "#1F6B4E",            // emerald
     intensity: 0.3,
+    creditUnit: "credits",
+    requiredTier: "Bronze",
+    requiredCredits: 0,
+    earnOnComplete: 10,
+    earnOnWitness: 1,
   },
   standard: {
     label: "Real Commitment",
-    description: "Put your money where your mouth is",
-    funder_amount: 2500,
-    activation_threshold: 1000,
-    fundee_pledge_amount: 25,
+    description: "Put your reputation on the line",
+    funder_amount: 500,
+    activation_threshold: 100,
+    fundee_pledge_amount: 50,
     days_until_deadline: 14,
-    color: "#A77D2A", // gold
+    color: "#A77D2A",            // gold
     intensity: 0.6,
+    creditUnit: "credits",
+    requiredTier: "Silver",
+    requiredCredits: 100,
+    earnOnComplete: 30,
+    earnOnWitness: 3,
   },
   high: {
     label: "All In",
     description: "No excuses. Maximum tension.",
-    funder_amount: 10000,
-    activation_threshold: 5000,
-    fundee_pledge_amount: 100,
+    funder_amount: 5000,
+    activation_threshold: 1000,
+    fundee_pledge_amount: 500,
     days_until_deadline: 7,
-    color: "#7B1730", // burgundy
+    color: "#7B1730",            // burgundy
     intensity: 1.0,
+    creditUnit: "credits",
+    requiredTier: "Gold",
+    requiredCredits: 300,
+    earnOnComplete: 50,
+    earnOnWitness: 5,
   },
 };
 
@@ -170,15 +190,27 @@ export function TensionSlider({
               <div className="font-ui text-[11px] font-medium text-ink-700">
                 {p.label}
               </div>
+              {/* Credit amount — replaces dollar stake */}
               <div className="font-ui text-[9px] text-ink-500 mt-1">
-                ${p.funder_amount.toLocaleString()} stake
+                {p.funder_amount.toLocaleString()} credits
+              </div>
+              {/* Required tier badge */}
+              <div
+                className="mt-1 inline-block px-1 py-0.5 rounded font-ui text-[8px] font-semibold"
+                style={{
+                  background: p.color + "22",
+                  color: p.color,
+                  border: `1px solid ${p.color}44`,
+                }}
+              >
+                {p.requiredTier}+
               </div>
             </motion.button>
           );
         })}
       </div>
       
-      {/* Details breakdown */}
+      {/* Details breakdown — credits instead of dollars */}
       <motion.div
         className="mt-3 p-3 bg-parchment-100 border border-parchment-300 rounded"
         key={currentPreset}
@@ -191,21 +223,44 @@ export function TensionSlider({
         </div>
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
-            <span className="font-ui text-[11px] text-ink-700">Funder stake:</span>
-            <span className="font-ui text-[12px] font-bold text-ink">${preset.funder_amount.toLocaleString()}</span>
+            <span className="font-ui text-[11px] text-ink-700">Bond credits at stake:</span>
+            <span className="font-ui text-[12px] font-bold text-ink">{preset.funder_amount.toLocaleString()} cr</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="font-ui text-[11px] text-ink-700">Activation threshold:</span>
-            <span className="font-ui text-[12px] font-bold text-ink">${preset.activation_threshold.toLocaleString()}</span>
+            <span className="font-ui text-[12px] font-bold text-ink">{preset.activation_threshold.toLocaleString()} cr</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="font-ui text-[11px] text-ink-700">Fundee pledge:</span>
-            <span className="font-ui text-[12px] font-bold text-ink">${preset.fundee_pledge_amount}</span>
+            <span className="font-ui text-[12px] font-bold text-ink">{preset.fundee_pledge_amount} cr</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="font-ui text-[11px] text-ink-700">Deadline:</span>
             <span className="font-ui text-[12px] font-bold text-ink">{preset.days_until_deadline} days</span>
           </div>
+        </div>
+
+        {/* Earning opportunity */}
+        <div className="mt-2 pt-2 border-t border-parchment-300">
+          <div className="font-ui text-[10px] uppercase tracking-widest text-ink-600 mb-1.5">
+            Earn on completion
+          </div>
+          <div className="flex gap-3">
+            <div className="flex items-center gap-1">
+              <span className="font-ui text-[10px] text-emerald-700 font-semibold">+{preset.earnOnComplete} cr</span>
+              <span className="font-ui text-[9px] text-ink-500">if you complete</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="font-ui text-[10px] text-emerald-700 font-semibold">+{preset.earnOnWitness} cr</span>
+              <span className="font-ui text-[9px] text-ink-500">per witness</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Required tier */}
+        <div className="mt-2 font-ui text-[10px] text-ink-500">
+          Requires <span className="font-semibold" style={{ color: preset.color }}>{preset.requiredTier}</span> reputation
+          {preset.requiredCredits > 0 ? ` (${preset.requiredCredits}+ credits)` : " (everyone starts here)"}
         </div>
       </motion.div>
     </div>

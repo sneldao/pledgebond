@@ -45,10 +45,10 @@ const CONTEST_TEMPLATE = {
   title: "Ship My Contest Entry by Deadline",
   category: "project",
   description: "I pledge to ship and submit my Fabrizio Romano x Emergent Builder's Contest entry before the deadline. Witnesses hold me accountable — no last-minute excuses.",
-  cause_name: "Builder's Contest $100K Prize Pool",
-  funder_amount: 1000,
-  activation_threshold: 200,
-  fundee_pledge_amount: 10,
+  cause_name: "Builder's Contest 100K Credits Prize Pool",
+  funder_amount: 500,         // Bond Credits
+  activation_threshold: 100,
+  fundee_pledge_amount: 50,
   completion_target_percent: 70,
   seal_style: "gold",
   cover_emoji: "\uD83C\uDFC6",
@@ -70,9 +70,9 @@ const FOOTBALL_TEMPLATE = {
   category: "football",
   description: "Seal your vow like a transfer deal. Pledge to hit your football goal — fitness, skills, watch every match, or coach your kid's team. Your crew witnesses it. Miss the deadline and everyone sees the L. HERE WE GO.",
   cause_name: "Grassroots Football Academy",
-  funder_amount: 2000,
-  activation_threshold: 300,
-  fundee_pledge_amount: 15,
+  funder_amount: 500,         // Bond Credits
+  activation_threshold: 100,
+  fundee_pledge_amount: 50,
   completion_target_percent: 70,
   seal_style: "burgundy",
   cover_emoji: "\u26BD",
@@ -96,9 +96,9 @@ const FITNESS_TEMPLATE = {
   category: "fitness",
   description: "Pledge to hit your fitness goal in 30 days — run 5K, hit the gym 3x/week, or beat your personal best. Your crew witnesses every check-in. Miss the deadline and everyone sees the L.",
   cause_name: "Community Wellness Fund",
-  funder_amount: 1500,
-  activation_threshold: 250,
-  fundee_pledge_amount: 15,
+  funder_amount: 500,         // Bond Credits
+  activation_threshold: 100,
+  fundee_pledge_amount: 50,
   completion_target_percent: 70,
   seal_style: "emerald",
   cover_emoji: "\uD83C\uDFC3",
@@ -132,9 +132,9 @@ export default function CreateBond() {
       cause_name: "",
       cause_link: "",
       funder_name: session?.displayName || "",
-      funder_amount: 2500,
-      activation_threshold: 400,
-      fundee_pledge_amount: 25,
+      funder_amount: 500,           // Bond Credits (was $2,500)
+      activation_threshold: 100,   // Bond Credits (was $400)
+      fundee_pledge_amount: 50,    // Bond Credits (was $25)
       deadline: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 16),
       completion_target_percent: 70,
       seal_style: "burgundy",
@@ -704,16 +704,16 @@ function SealStep({ form, set }) {
             <span className="font-medium text-ink capitalize">{form.tension_preset || "standard"}</span>
           </div>
           <div className="flex justify-between">
-            <span>Funder stake:</span>
-            <span className="font-medium text-ink">${form.funder_amount}</span>
+            <span>Credits at stake:</span>
+            <span className="font-medium text-ink">{Number(form.funder_amount).toLocaleString()} cr</span>
           </div>
           <div className="flex justify-between">
             <span>Activation:</span>
-            <span className="font-medium text-ink">${form.activation_threshold}</span>
+            <span className="font-medium text-ink">{Number(form.activation_threshold).toLocaleString()} cr</span>
           </div>
           <div className="flex justify-between">
             <span>Fundee pledge:</span>
-            <span className="font-medium text-ink">${form.fundee_pledge_amount}</span>
+            <span className="font-medium text-ink">{Number(form.fundee_pledge_amount).toLocaleString()} cr</span>
           </div>
           <div className="flex justify-between">
             <span>Deadline:</span>
@@ -729,7 +729,7 @@ function SealStep({ form, set }) {
           </div>
         </div>
         <div className="mt-3 pt-3 border-t border-parchment-300 font-ui text-[11px] text-ink-500">
-          The bond will be published as "Awaiting Seal" until the fundee pool reaches ${form.activation_threshold}.
+          The bond will be published as "Awaiting Seal" until the fundee pool reaches {Number(form.activation_threshold).toLocaleString()} credits.
         </div>
       </div>
     </div>

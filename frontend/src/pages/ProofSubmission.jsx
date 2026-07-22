@@ -6,7 +6,7 @@ import RibbonButton from "@/components/RibbonButton";
 import WaxStamp from "@/components/WaxStamp";
 import SealLoader from "@/components/SealLoader";
 import { api } from "@/lib/api";
-import { getMyParticipantId } from "@/lib/session";
+import { getMyParticipantId, recordProofForStreak } from "@/lib/session";
 import { sfx } from "@/lib/sound";
 import { toast } from "sonner";
 import { Upload, Camera } from "lucide-react";
@@ -64,10 +64,26 @@ export default function ProofSubmission() {
       };
       const b = await api.submitProof(id, body);
       sfx.pledgeIn();
-      
+
       // Particle burst celebration
       particleBurst(window.innerWidth / 2, window.innerHeight / 2);
-      
+
+      // Record streak day only after a successful proof submission
+      const streakResult = recordProofForStreak(id);
+      if (streakResult.broken) {
+        toast.error("Streak broken! −5 credits", {
+          description: `Your ${streakResult.longest}-day streak ended. Starting fresh.`,
+        });
+      } else if (streakResult.creditsAwarded > 0) {
+        toast.success(`🔥 ${streakResult.current}-day streak! +${streakResult.creditsAwarded} bonus credits`, {
+          description: "Keep going — next milestone coming up.",
+        });
+      } else if (streakResult.current > 1) {
+        toast.success(`🔥 ${streakResult.current}-day streak`, {
+          description: "Consistency builds trust.",
+        });
+      }
+
       toast.success("Clause fulfilled", { description: "Auto-approved on this demo ledger." });
       nav(`/bond/${id}`);
     } catch (e) {

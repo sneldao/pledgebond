@@ -271,10 +271,10 @@ def render_bond_card(bond: dict) -> bytes:
     participant_count = len(bond.get("participants", []))
     witness_count = len(bond.get("witnesses", []))
 
-    # Three stat columns
+    # Three stat columns — Bond Credits, not dollars
     col_w = text_max_w // 3
     stats = [
-        ("AT STAKE", f"${int(funder_amount):,}"),
+        ("AT STAKE", f"{int(funder_amount):,} cr"),
         ("PLEDGED", f"{participant_count} fundees"),
         ("WITNESSING", f"{witness_count} watchers"),
     ]

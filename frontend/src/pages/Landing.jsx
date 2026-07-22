@@ -6,12 +6,12 @@ import RibbonButton from "@/components/RibbonButton";
 import ParticleField from "@/components/ParticleField";
 import SoccerBallLoader from "@/components/SoccerBallLoader";
 import { CategoryMotif } from "@/components/PbIllustrations";
-import { setSession, getSession } from "@/lib/session";
+import { setSession, getSession, initCredits, getCredits, getReputationTier } from "@/lib/session";
 import { sfx, unlockAudio } from "@/lib/sound";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import { Sparkles, Eye, CheckCircle, TrendingUp, ArrowLeft } from "lucide-react";
+import { Sparkles, Eye, CheckCircle, TrendingUp, ArrowLeft, Coins } from "lucide-react";
 import { 
   SignetRing, 
   SignetRingPicker, 
@@ -63,6 +63,10 @@ export default function Landing() {
   const [signetStyle, setSignetStyle] = useState("classic");
   const [tensionLevel, setTensionLevel] = useState("standard");
   const [atmosphere, setAtmosphere] = useState("archive");
+
+  // Credits & reputation — initialized lazily
+  const [creditStore, setCreditStore] = useState(() => getCredits());
+  const credits = creditStore?.balance ?? null;
 
   // Cinematic seal entrance — drop in with thud
   useEffect(() => {
@@ -211,15 +215,28 @@ export default function Landing() {
       return;
     }
     const selected = PLEDGE_GOALS.find((g) => g.key === goal);
+    // Check if this is a brand-new user (credits uninitialized before setSession)
+    const wasNew = getCredits() === null;
     setSession({ displayName: name.trim(), role: "fundee", color: selected?.color || "#A77D2A" });
+    // Refresh credit store after setSession (which calls initCredits on first use)
+    const store = getCredits();
+    setCreditStore(store);
+
+    if (wasNew && store) {
+      // Celebrate the welcome bonus
+      toast.success("Welcome bonus — 100 Bond Credits added", {
+        description: "You're starting as Bronze. Complete bonds to earn your way to Platinum.",
+        duration: 5000,
+      });
+    }
     
     // Build URL params with personalization data
     const params = new URLSearchParams();
     if (selected?.template) params.set("template", selected.template);
-    if (pledgeContext.trim()) params.set("context", pledgeContext.trim());
-    if (pledgeTarget.trim()) params.set("target", pledgeTarget.trim());
-    if (pledgeDeadline.trim()) params.set("deadline", pledgeDeadline.trim());
-    params.set("seal", sealStyle);
+    if (tensionLevel) params.set("tension", tensionLevel);
+    if (pledgeDeadline) params.set("deadline", pledgeDeadline);
+    if (atmosphere) params.set("atmosphere", atmosphere);
+    if (signetStyle) params.set("signet", signetStyle);
     
     toast.success(`Welcome, ${name.trim()}`, { description: `Pledging: ${selected?.label}` });
     
@@ -274,6 +291,23 @@ export default function Landing() {
           <h1 className="font-serif-display text-[28px] leading-none tracking-serif-tight text-ink">
             Pledge<span className="text-wax">bond</span>
           </h1>
+          {/* Credits badge — shown when the user has initialized */}
+          {credits !== null && (
+            <motion.div
+              className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-parchment-100 border border-parchment-300 rounded-full"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Coins size={10} className="text-gold" />
+              <span className="font-ui text-[10px] font-semibold text-ink">
+                {credits.toLocaleString()} credits
+              </span>
+              <span className="font-ui text-[9px] text-ink-500">
+                · {getReputationTier(credits).name}
+              </span>
+            </motion.div>
+          )}
         </div>
 
         {/* Subtle stats pill — not prominent */}
@@ -505,7 +539,7 @@ export default function Landing() {
               </motion.div>
             )}
 
-            {/* STEP 3 — NAME INPUT */}
+            {/* STEP 3 — NAME INPUT (focused) */}
             {step === "name" && (
               <motion.div
                 key="name"
@@ -550,7 +584,7 @@ export default function Landing() {
                     </div>
                   </div>
                   <h2 className="font-serif-display text-[26px] text-ink text-center mb-2 tracking-serif-tight">
-                    Sign your mark
+                    Who are you?
                   </h2>
                   <p className="font-ui text-[13px] text-ink-500 text-center">
                     Your name appears on the ledger. No account required.
@@ -571,7 +605,7 @@ export default function Landing() {
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") proceed(); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") setStep("tension"); }}
                       placeholder="Enter your name"
                       data-testid="landing-display-name-input"
                       className="w-full px-5 py-4 bg-parchment-50 border-2 border-parchment-300 outline-none font-ui text-[16px] text-ink placeholder:text-ink-500/40 focus:border-wax focus:shadow-wax transition-all"
@@ -581,96 +615,261 @@ export default function Landing() {
                     </div>
                   </div>
 
+                  {/* Signet Ring preview — shows initials as they type */}
+                  {name.trim() && (
+                    <motion.div
+                      className="flex flex-col items-center gap-2 p-4 bg-parchment-100 border border-parchment-300 rounded-lg"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <SignetRing 
+                        initials={name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()} 
+                        style={signetStyle}
+                        color={selectedGoal?.color || "#7B1730"}
+                        size={64}
+                        interactive={false}
+                      />
+                      <div className="font-ui text-[11px] text-ink-500">
+                        Your signet seal
+                      </div>
+                    </motion.div>
+                  )}
+
                   <div className="font-ui text-[11px] text-ink-500 text-center leading-relaxed">
                     Stored only on this device. You can change it later.
                   </div>
                 </motion.div>
 
-                {/* Personalization fields — rich components */}
+                {/* CTA button */}
                 <motion.div
-                  className="w-full max-w-[400px] mt-6 space-y-6"
+                  className="mt-8 w-full max-w-[360px]"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.3 }}
                 >
-                  <div className="font-ui text-[11px] uppercase tracking-widest text-ink-600 mb-2 text-center">
-                    Personalize Your Bond
-                  </div>
+                  <RibbonButton
+                    variant="wax"
+                    onClick={() => setStep("tension")}
+                    data-testid="landing-continue-button"
+                    className="w-full press-feedback"
+                    disabled={!name.trim()}
+                  >
+                    <Sparkles size={14} className="inline mr-1" />
+                    Continue
+                  </RibbonButton>
+                </motion.div>
+              </motion.div>
+            )}
 
-                  {/* Signet Ring — live preview of your identity */}
-                  <div className="flex flex-col items-center gap-3 p-4 bg-parchment-100 border border-parchment-300 rounded-lg">
-                    <SignetRing 
-                      initials={name || "PB"} 
-                      style={signetStyle}
-                      color={selectedGoal?.color || "#7B1730"}
-                      size={80}
-                      interactive={true}
-                      selected={true}
-                    />
-                    <div className="font-serif-display text-[14px] text-ink">
-                      {name || "Your Name"}
+            {/* STEP 4 — TENSION (single decision) */}
+            {step === "tension" && (
+              <motion.div
+                key="tension"
+                initial={{ opacity: 0, y: 40, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -30, scale: 0.98 }}
+                transition={{ duration: 0.5, ease: EASE_OUT }}
+                className="flex flex-col items-center"
+                data-testid="landing-step-tension"
+              >
+                <button
+                  onClick={() => setStep("name")}
+                  className="self-start mb-6 flex items-center gap-1.5 font-ui text-[12px] text-ink-500 hover:text-ink transition-colors press-feedback group"
+                  data-testid="landing-back-to-name"
+                >
+                  <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Back
+                </button>
+
+                <div className="text-center mb-6">
+                  <div className="inline-flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-full bg-wax flex items-center justify-center">
+                      <span className="font-serif-display text-[14px] text-parchment font-bold">4</span>
                     </div>
                   </div>
+                  <h2 className="font-serif-display text-[26px] text-ink text-center mb-2 tracking-serif-tight">
+                    How serious is this?
+                  </h2>
+                  <p className="font-ui text-[13px] text-ink-500 text-center">
+                    Choose your Bond Credit stake — no real money, real psychological stakes
+                  </p>
+                </div>
 
-                  {/* Signet style picker */}
-                  <SignetRingPicker
-                    value={signetStyle}
-                    onChange={setSignetStyle}
-                    initials={name || "PB"}
-                    color={selectedGoal?.color || "#7B1730"}
-                  />
+                {/* Reputation tier preview */}
+                <motion.div
+                  className="w-full max-w-[400px] mb-5 p-3 bg-parchment-50 border border-parchment-200 rounded-lg"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, ease: EASE_OUT, delay: 0.1 }}
+                >
+                  <div className="font-ui text-[9px] uppercase tracking-widest text-ink-500 mb-2">
+                    Reputation tiers
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[
+                      { name: "Bronze", credits: "0", color: "#8B6534", bonds: "50 cr bonds" },
+                      { name: "Silver", credits: "100+", color: "#8C8C9A", bonds: "500 cr bonds" },
+                      { name: "Gold", credits: "300+", color: "#A77D2A", bonds: "5K cr bonds" },
+                      { name: "Platinum", credits: "800+", color: "#4A5568", bonds: "Unlimited" },
+                    ].map((t) => (
+                      <div
+                        key={t.name}
+                        className="flex flex-col items-center p-2 rounded border"
+                        style={{ borderColor: t.color + "44", background: t.color + "0D" }}
+                      >
+                        <span className="font-ui text-[9px] font-semibold" style={{ color: t.color }}>{t.name}</span>
+                        <span className="font-ui text-[8px] text-ink-500 mt-0.5">{t.credits} cr</span>
+                        <span className="font-ui text-[7px] text-ink-400 mt-0.5 text-center">{t.bonds}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-2 font-ui text-[9px] text-ink-500 text-center">
+                    Everyone starts with <span className="font-semibold text-emerald-700">100 credits</span>. Earn more by completing bonds.
+                  </div>
+                </motion.div>
 
-                  {/* Tension Slider — physical stakes visualization */}
+                <motion.div
+                  className="w-full max-w-[400px]"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.2 }}
+                >
                   <TensionSlider
                     value={tensionLevel}
                     onChange={setTensionLevel}
-                    label="Stakes Intensity"
                   />
+                </motion.div>
 
-                  {/* Pledge context */}
-                  <div>
-                    <label className="font-ui text-[12px] text-ink-600 mb-1 block">What are you committing to?</label>
-                    <textarea
-                      id="pledge-context-input"
-                      type="text"
-                      value={pledgeContext}
-                      onChange={(e) => setPledgeContext(e.target.value)}
-                      placeholder="e.g., Complete 50 push-ups daily for 30 days"
-                      data-testid="landing-pledge-context-input"
-                      className="w-full px-4 py-3 bg-parchment-50 border-2 border-parchment-300 outline-none font-ui text-[14px] text-ink placeholder:text-ink-500/40 focus:border-wax transition-all resize-none"
-                      rows={2}
-                    />
+                <motion.div
+                  className="mt-8 w-full max-w-[360px]"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.3 }}
+                >
+                  <RibbonButton
+                    variant="wax"
+                    onClick={() => setStep("deadline")}
+                    data-testid="landing-continue-button"
+                    className="w-full press-feedback"
+                  >
+                    <Sparkles size={14} className="inline mr-1" />
+                    Continue
+                  </RibbonButton>
+                </motion.div>
+              </motion.div>
+            )}
+
+            {/* STEP 5 — DEADLINE (single decision) */}
+            {step === "deadline" && (
+              <motion.div
+                key="deadline"
+                initial={{ opacity: 0, y: 40, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -30, scale: 0.98 }}
+                transition={{ duration: 0.5, ease: EASE_OUT }}
+                className="flex flex-col items-center"
+                data-testid="landing-step-deadline"
+              >
+                <button
+                  onClick={() => setStep("tension")}
+                  className="self-start mb-6 flex items-center gap-1.5 font-ui text-[12px] text-ink-500 hover:text-ink transition-colors press-feedback group"
+                  data-testid="landing-back-to-tension"
+                >
+                  <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Back
+                </button>
+
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-full bg-wax flex items-center justify-center">
+                      <span className="font-serif-display text-[14px] text-parchment font-bold">5</span>
+                    </div>
                   </div>
+                  <h2 className="font-serif-display text-[26px] text-ink text-center mb-2 tracking-serif-tight">
+                    When's the deadline?
+                  </h2>
+                  <p className="font-ui text-[13px] text-ink-500 text-center">
+                    Pick a date. Your crew will hold you to it.
+                  </p>
+                </div>
 
-                  {/* Pledge target */}
-                  <div>
-                    <label className="font-ui text-[12px] text-ink-600 mb-1 block">Set your target (optional)</label>
-                    <input
-                      id="pledge-target-input"
-                      type="text"
-                      value={pledgeTarget}
-                      onChange={(e) => setPledgeTarget(e.target.value)}
-                      placeholder="e.g., 50 push-ups, 5K run, ship MVP"
-                      data-testid="landing-pledge-target-input"
-                      className="w-full px-4 py-3 bg-parchment-50 border-2 border-parchment-300 outline-none font-ui text-[14px] text-ink placeholder:text-ink-500/40 focus:border-wax transition-all"
-                    />
-                  </div>
-
-                  {/* Deadline Chips */}
+                <motion.div
+                  className="w-full max-w-[400px]"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.2 }}
+                >
                   <DeadlineChips
                     value={pledgeDeadline}
                     onChange={setPledgeDeadline}
                     category={goal}
                   />
+                </motion.div>
 
-                  {/* Atmosphere Picker — visual vibe */}
+                <motion.div
+                  className="mt-8 w-full max-w-[360px]"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.3 }}
+                >
+                  <RibbonButton
+                    variant="wax"
+                    onClick={() => setStep("atmosphere")}
+                    data-testid="landing-continue-button"
+                    className="w-full press-feedback"
+                    disabled={!pledgeDeadline}
+                  >
+                    <Sparkles size={14} className="inline mr-1" />
+                    Continue
+                  </RibbonButton>
+                </motion.div>
+              </motion.div>
+            )}
+
+            {/* STEP 6 — ATMOSPHERE (single decision) */}
+            {step === "atmosphere" && (
+              <motion.div
+                key="atmosphere"
+                initial={{ opacity: 0, y: 40, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -30, scale: 0.98 }}
+                transition={{ duration: 0.5, ease: EASE_OUT }}
+                className="flex flex-col items-center"
+                data-testid="landing-step-atmosphere"
+              >
+                <button
+                  onClick={() => setStep("deadline")}
+                  className="self-start mb-6 flex items-center gap-1.5 font-ui text-[12px] text-ink-500 hover:text-ink transition-colors press-feedback group"
+                  data-testid="landing-back-to-deadline"
+                >
+                  <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Back
+                </button>
+
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-full bg-wax flex items-center justify-center">
+                      <span className="font-serif-display text-[14px] text-parchment font-bold">6</span>
+                    </div>
+                  </div>
+                  <h2 className="font-serif-display text-[26px] text-ink text-center mb-2 tracking-serif-tight">
+                    What's the vibe?
+                  </h2>
+                  <p className="font-ui text-[13px] text-ink-500 text-center">
+                    Set the visual tone for your bond page
+                  </p>
+                </div>
+
+                <motion.div
+                  className="w-full max-w-[400px]"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.2 }}
+                >
                   <AtmospherePicker
                     value={atmosphere}
                     onChange={setAtmosphere}
                   />
                 </motion.div>
 
-                {/* CTA button */}
                 <motion.div
                   className="mt-8 w-full max-w-[360px]"
                   initial={{ opacity: 0, y: 20 }}
@@ -684,7 +883,7 @@ export default function Landing() {
                     className="w-full press-feedback"
                   >
                     <Sparkles size={14} className="inline mr-1" />
-                    {goal ? `Seal Your ${selectedGoal?.label}` : "Choose a goal to begin"}
+                    Seal Your {selectedGoal?.label}
                   </RibbonButton>
                 </motion.div>
               </motion.div>
@@ -695,7 +894,7 @@ export default function Landing() {
 
         {/* Footer disclaimer — subtle, bottom */}
         <p className="mt-4 font-ui text-[10px] text-ink-500/70 text-center">
-          Stakes are pledge points — commitment signals, not real money.
+          Bond Credits are earned reputation — not real money. Start with 100 free credits.
         </p>
       </div>
     </div>

@@ -12,11 +12,11 @@ import MatchdayBackdrop from "@/components/MatchdayBackdrop";
 import { EmptyStateIllustration, PledgeIcon, WitnessIcon, SealIcon, ReleaseIcon, ProofIcon, SquadIcon, DeadlineIcon, StakeIcon } from "@/components/PbIllustrations";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
-import { getSession, markJoined, getMyParticipantId, markWitnessed, isWitnessing } from "@/lib/session";
+import { getSession, markJoined, getMyParticipantId, markWitnessed, isWitnessing, adjustCredits, getCredits, getReputationTier, getStreaks } from "@/lib/session";
 import { vocab } from "@/lib/categoryVocab";
 import { sfx, unlockAudio } from "@/lib/sound";
 import { toast } from "sonner";
-import { Check, Trophy, Share2, Copy, Download, X } from "lucide-react";
+import { Check, Trophy, Share2, Copy, Download, X, Flame, Coins } from "lucide-react";
 import { StaggeredList, particleBurst, screenShake } from "@/components/motion";
 
 function fmtCountdown(iso) {
@@ -137,16 +137,29 @@ export default function BondDashboard() {
       const me = b.participants[b.participants.length - 1];
       markJoined(id, me.id);
       sfx.pledgeIn();
-      
+
+      // Deduct pledge credits — skin in the game
+      const pledgeCredits = b.fundee_pledge_amount || 5;
+      const store = getCredits();
+      const balanceBefore = store?.balance ?? 0;
+      adjustCredits(-pledgeCredits, `pledged on bond ${id}`);
+      const newStore = getCredits();
+      const tier = newStore ? getReputationTier(newStore.balance) : null;
+      const insufficient = balanceBefore < pledgeCredits;
+
       // Trigger reaction effects
       const vaultEl = document.querySelector('[data-testid="bond-dashboard-vault"]');
       if (vaultEl) {
         particleBurst(vaultEl);
         screenShake();
       }
-      
+
       setBond(b);
-      toast.success("Your mark is witnessed.", { description: `You pledged $${b.fundee_pledge_amount}.` });
+      toast.success("Your mark is witnessed.", {
+        description: insufficient
+          ? `−${pledgeCredits} cr staked (balance was low — pledge floors at 0)${tier ? ` · ${tier.name} tier` : ""}`
+          : `−${pledgeCredits} cr staked · complete the bond to earn ${pledgeCredits * 2} cr back${tier ? ` · ${tier.name} tier` : ""}`,
+      });
       if (b.status === "active" && prevStatus === "pending") {
         setTimeout(() => {
           sfx.sealLock();
@@ -167,6 +180,8 @@ export default function BondDashboard() {
       toast.error("Only witnessed fundees can log clauses.");
       return;
     }
+    // Streak day is recorded in ProofSubmission after a successful upload,
+    // not here — otherwise backing out without submitting would count.
     nav(`/bond/${id}/proof/${taskId}`);
   };
 
@@ -195,8 +210,16 @@ export default function BondDashboard() {
       });
       markWitnessed(id);
       sfx.pledgeIn();
+
+      // Award credits for witnessing (+3 cr)
+      adjustCredits(3, `witnessed bond ${id}`);
+      const newStore = getCredits();
+      const tier = newStore ? getReputationTier(newStore.balance) : null;
+
       setBond(b);
-      toast.success("You're now witnessing.", { description: "We'll notify you when proof is submitted or the bond releases." });
+      toast.success("You're now witnessing.", {
+        description: `+3 Bond Credits earned${tier ? ` · ${tier.name} tier` : ""}`,
+      });
     } catch (e) {
       toast.error("Could not witness", { description: e?.response?.data?.detail || e.message });
     } finally {
@@ -213,8 +236,8 @@ export default function BondDashboard() {
 
     // Fabrizio-style share text for football bonds
     const shareText = isFootball
-      ? `\uD83D\uDEA8 HERE WE GO! ${bond.title?.replace(/^HERE WE GO:\s*/, "") || "A pledge is sealed"}. ${squadCount} in the squad. Stake: $${bond.funder_amount?.toLocaleString()}. Deadline day: ${new Date(bond.deadline).toLocaleDateString()}. Witness the vow \u2192`
-      : `Witness this pledge: ${bond.title}. ${squadCount} participants. ${funderName} staked $${bond.funder_amount?.toLocaleString()}. Deadline: ${new Date(bond.deadline).toLocaleDateString()}.`;
+      ? `\uD83D\uDEA8 HERE WE GO! ${bond.title?.replace(/^HERE WE GO:\s*/, "") || "A pledge is sealed"}. ${squadCount} in the squad. Stake: ${bond.funder_amount?.toLocaleString()} credits. Deadline day: ${new Date(bond.deadline).toLocaleDateString()}. Witness the vow \u2192`
+      : `Witness this pledge: ${bond.title}. ${squadCount} participants. ${funderName} staked ${bond.funder_amount?.toLocaleString()} credits. Deadline: ${new Date(bond.deadline).toLocaleDateString()}.`;
 
     if (navigator.share) {
       try {
@@ -380,8 +403,8 @@ export default function BondDashboard() {
 
         {/* Meta strip */}
         <div className="mt-6 grid grid-cols-3 gap-2 w-full">
-          <MetaBox label="At stake" value={`$${(bond.funder_amount || 0).toLocaleString()}`} football={isFootball} />
-          <MetaBox label={bond.category === "football" ? "Stake pool" : "Pool"} value={`$${totalPledged.toLocaleString()} / $${bond.activation_threshold.toLocaleString()}`} football={isFootball} />
+          <MetaBox label="At stake" value={`${(bond.funder_amount || 0).toLocaleString()} cr`} football={isFootball} />
+          <MetaBox label={bond.category === "football" ? "Stake pool" : "Pool"} value={`${totalPledged.toLocaleString()} / ${bond.activation_threshold.toLocaleString()} cr`} football={isFootball} />
           <MetaBox label={bond.status === "pending" ? "Time to seal" : bond.category === "football" ? "Deadline day" : "Time remaining"} value={cdText} football={isFootball} />
         </div>
 
@@ -469,7 +492,7 @@ export default function BondDashboard() {
         <div className="mt-3 flex items-center gap-2 text-[12px] font-ui text-ink-600">
           <span>Funder — <b>{bond.funder_name || "Anonymous Patron"}</b></span>
           <span>·</span>
-          <span>Match — <b>${bond.fundee_pledge_amount}</b></span>
+          <span>Match — <b>{bond.fundee_pledge_amount} cr</b></span>
         </div>
       </div>
 
@@ -548,14 +571,14 @@ export default function BondDashboard() {
               data-testid="bond-dashboard-join-button"
               style={{ opacity: alreadyJoined ? 0.6 : 1 }}
             >
-              {alreadyJoined ? "Mark witnessed \u2713" : joining ? "Pressing wax..." : bond.category === "football" ? `Stake $${bond.fundee_pledge_amount} & Join the squad` : `Pledge $${bond.fundee_pledge_amount} & Join`}
+              {alreadyJoined ? "Mark witnessed \u2713" : joining ? "Pressing wax..." : bond.category === "football" ? `Pledge ${bond.fundee_pledge_amount} cr & Join` : `Pledge ${bond.fundee_pledge_amount} cr & Join`}
             </RibbonButton>
           )}
           {bond.status === "active" && (
             <>
               {!alreadyJoined ? (
                 <RibbonButton variant="wax" className="flex-1" onClick={join} data-testid="bond-dashboard-late-join-button">
-                  Join late — pledge ${bond.fundee_pledge_amount}
+                  Join late — pledge {bond.fundee_pledge_amount} cr
                 </RibbonButton>
               ) : (
                 <RibbonButton variant="wax" className="flex-1" onClick={() => submitProof(bond.task_requirements[0]?.id)} data-testid="bond-dashboard-submit-proof-button">
@@ -705,6 +728,13 @@ function MetaBox({ label, value, football = false }) {
 function TaskRow({ task, bond, myPid, onSubmit, index }) {
   const isDone = !!myPid && !!bond.participants.find((p) => p.id === myPid && (p.completed_tasks || []).includes(task.id));
   const totalDone = bond.participants.reduce((n, p) => n + ((p.completed_tasks || []).includes(task.id) ? 1 : 0), 0);
+
+  // Pull streak from session for this bond
+  const streak = React.useMemo(() => {
+    const streaks = getStreaks();
+    return streaks[bond.id]?.current || 0;
+  }, [bond.id]);
+
   return (
     <div className="py-3 flex items-start gap-3" data-testid={`bond-task-row-${index}`}>
       <div className="shrink-0 mt-1">
@@ -713,9 +743,21 @@ function TaskRow({ task, bond, myPid, onSubmit, index }) {
         </div>
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="font-serif-display text-[16px] text-ink leading-tight">{task.title}</div>
           <WaxStamp variant="gold" className="text-[9px] shrink-0">{task.verification.replace("_", " ")}</WaxStamp>
+          {/* Streak badge — shown when user has an active streak on this bond */}
+          {myPid && streak >= 2 && index === 0 && (
+            <motion.div
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full"
+              style={{ background: "rgba(234,88,12,0.12)", border: "1px solid rgba(234,88,12,0.3)" }}
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+            >
+              <Flame size={10} className="text-orange-600" />
+              <span className="font-ui text-[9px] font-semibold text-orange-700">{streak}d streak</span>
+            </motion.div>
+          )}
         </div>
         <div className="font-ui text-[11.5px] text-ink-500 mt-0.5">
           {totalDone}/{bond.participants.length} {bond.category === "football" ? "done" : "witnessed"} · {task.task_type.replace("_", " ")}

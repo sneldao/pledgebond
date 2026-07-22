@@ -29,9 +29,9 @@ class BondTemplate(BaseModel):
     category: str  # fitness, learning, charity, social, habit
     cover_emoji: str = "🎯"
     default_seal_style: str = "burgundy"
-    suggested_funder_amount: float = 1000
-    suggested_fundee_pledge: float = 25
-    suggested_threshold: float = 200
+    suggested_funder_amount: float = 500
+    suggested_fundee_pledge: float = 50
+    suggested_threshold: float = 100
     suggested_completion_percent: int = 70
     suggested_duration_days: int = 30
     task_templates: List[TaskTemplate] = []
@@ -51,9 +51,9 @@ class CreateTemplateRequest(BaseModel):
     category: str
     cover_emoji: str = "🎯"
     default_seal_style: str = "burgundy"
-    suggested_funder_amount: float = 1000
-    suggested_fundee_pledge: float = 25
-    suggested_threshold: float = 200
+    suggested_funder_amount: float = 500
+    suggested_fundee_pledge: float = 50
+    suggested_threshold: float = 100
     suggested_completion_percent: int = 70
     suggested_duration_days: int = 30
     task_templates: List[TaskTemplate] = []
@@ -187,7 +187,7 @@ async def seed_default_templates(db):
             category="habit",
             cover_emoji="🎯",
             suggested_funder_amount=500,
-            suggested_fundee_pledge=20,
+            suggested_fundee_pledge=50,
             suggested_threshold=100,
             suggested_duration_days=21,
             suggested_completion_percent=80,
@@ -204,9 +204,9 @@ async def seed_default_templates(db):
             description="Maintain a workout streak with photo proof and progress tracking",
             category="fitness",
             cover_emoji="💪",
-            suggested_funder_amount=1000,
-            suggested_fundee_pledge=25,
-            suggested_threshold=150,
+            suggested_funder_amount=500,
+            suggested_fundee_pledge=50,
+            suggested_threshold=100,
             suggested_duration_days=30,
             suggested_completion_percent=70,
             task_templates=[
@@ -221,9 +221,9 @@ async def seed_default_templates(db):
             description="Complete a course or learning goal with milestone checkpoints",
             category="learning",
             cover_emoji="📚",
-            suggested_funder_amount=800,
-            suggested_fundee_pledge=30,
-            suggested_threshold=120,
+            suggested_funder_amount=500,
+            suggested_fundee_pledge=50,
+            suggested_threshold=100,
             suggested_duration_days=45,
             suggested_completion_percent=75,
             task_templates=[
@@ -238,9 +238,9 @@ async def seed_default_templates(db):
             description="Raise awareness and funds for a cause with community participation",
             category="charity",
             cover_emoji="❤️",
-            suggested_funder_amount=2000,
-            suggested_fundee_pledge=15,
-            suggested_threshold=300,
+            suggested_funder_amount=500,
+            suggested_fundee_pledge=50,
+            suggested_threshold=100,
             suggested_duration_days=14,
             suggested_completion_percent=60,
             task_templates=[
@@ -256,9 +256,9 @@ async def seed_default_templates(db):
             description="Complete a social challenge with friends and track collective progress",
             category="social",
             cover_emoji="👥",
-            suggested_funder_amount=600,
-            suggested_fundee_pledge=20,
-            suggested_threshold=80,
+            suggested_funder_amount=50,
+            suggested_fundee_pledge=5,
+            suggested_threshold=25,
             suggested_duration_days=7,
             suggested_completion_percent=80,
             task_templates=[

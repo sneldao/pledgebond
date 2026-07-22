@@ -1,8 +1,8 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { getSession, clearSession } from "@/lib/session";
+import { getSession, clearSession, getCredits, getReputationTier } from "@/lib/session";
 import { isMuted, setMuted, unlockAudio } from "@/lib/sound";
-import { Volume2, VolumeX, ChevronLeft, Compass } from "lucide-react";
+import { Volume2, VolumeX, ChevronLeft, Compass, Coins } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { BackdropProvider } from "@/components/motion";
@@ -11,6 +11,9 @@ export const AppShell = ({ children, showBack = false, backTo = null, title = ""
   const nav = useNavigate();
   const session = getSession();
   const [muted, setLocalMuted] = useState(isMuted());
+  const creditStore = getCredits();
+  const credits = creditStore?.balance ?? null;
+  const tier = credits !== null ? getReputationTier(credits) : null;
 
   useEffect(() => {
     unlockAudio();
@@ -52,6 +55,19 @@ export const AppShell = ({ children, showBack = false, backTo = null, title = ""
           </div>
           <div className="flex items-center gap-2">
             {right}
+            {/* Credits badge — shown when user has initialized credits */}
+            {credits !== null && (
+              <button
+                onClick={() => nav("/explore")}
+                className="hidden sm:flex items-center gap-1 px-2 py-1 rounded border border-parchment-300 bg-parchment-50 hover:bg-parchment-200 transition-colors"
+                title={`${tier?.name} tier — ${credits} credits`}
+                aria-label="Bond credits balance"
+              >
+                <Coins size={11} className="text-gold" />
+                <span className="font-ui text-[10px] font-semibold text-ink">{credits.toLocaleString()}</span>
+                <span className="font-ui text-[9px] text-ink-500">{tier?.name}</span>
+              </button>
+            )}
             <NotificationsBell />
             <button
               onClick={toggleMute}

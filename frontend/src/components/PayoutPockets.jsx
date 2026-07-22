@@ -34,7 +34,7 @@ export const PayoutPockets = ({ splits = [], filled = false, totalAmount = 0, cl
               </div>
               <div>
                 <div className="font-serif-display text-[15px] text-ink leading-tight">{s.label}</div>
-                <div className="font-ui text-[11px] text-ink-500">Demo ledger · ${amount.toLocaleString()}</div>
+                <div className="font-ui text-[11px] text-ink-500">Demo ledger · {amount.toLocaleString()} cr</div>
               </div>
             </div>
             <motion.div

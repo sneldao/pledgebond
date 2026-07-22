@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { toPng } from "html-to-image";
 import { api } from "@/lib/api";
+import { getMyParticipantId, settleBond } from "@/lib/session";
 import { sfx, unlockAudio } from "@/lib/sound";
 import { toast } from "sonner";
 import { Share2, Download, RefreshCcw, Copy, X } from "lucide-react";
@@ -55,6 +56,26 @@ export default function ReleaseScreen() {
         setTriggered(true);
         if (updated.status === "released") sfx.release();
         else sfx.fail();
+
+        // Settle credits if the current user joined this bond
+        const myPid = getMyParticipantId(id);
+        if (myPid) {
+          const pledge = bond.fundee_pledge_amount || 0;
+          const result = settleBond(id, pledge, updated.status === "released");
+          if (result.settled) {
+            if (updated.status === "released" && result.creditsAwarded > 0) {
+              toast.success(`Bond released! +${result.creditsAwarded} cr earned`, {
+                description: `Your ${pledge} cr stake doubled — net profit ${pledge} cr.`,
+                duration: 5000,
+              });
+            } else if (updated.status === "failed") {
+              toast.error("Bond broken — stake forfeited", {
+                description: `${pledge} cr lost. The vault stays shut.`,
+                duration: 5000,
+              });
+            }
+          }
+        }
       } catch (e) {
         toast.error("Release check failed", { description: e?.response?.data?.detail });
       }
@@ -81,6 +102,31 @@ export default function ReleaseScreen() {
     }
     // eslint-disable-next-line
   }, [bond]);
+
+  // Settle credits on first arrival if bond is already released/failed
+  // (covers the case where the user navigates to a settled bond directly)
+  useEffect(() => {
+    if (!bond || !id) return;
+    const myPid = getMyParticipantId(id);
+    if (!myPid) return;
+    if (bond.status !== "released" && bond.status !== "failed") return;
+    const pledge = bond.fundee_pledge_amount || 0;
+    const result = settleBond(id, pledge, bond.status === "released");
+    if (result.settled) {
+      if (bond.status === "released" && result.creditsAwarded > 0) {
+        toast.success(`Bond released! +${result.creditsAwarded} cr earned`, {
+          description: `Your ${pledge} cr stake doubled — net profit ${pledge} cr.`,
+          duration: 5000,
+        });
+      } else if (bond.status === "failed") {
+        toast.error("Bond broken — stake forfeited", {
+          description: `${pledge} cr lost. The vault stays shut.`,
+          duration: 5000,
+        });
+      }
+    }
+    // eslint-disable-next-line
+  }, [bond, id]);
 
   // Coin cascade when step becomes 'coins'
   useEffect(() => {

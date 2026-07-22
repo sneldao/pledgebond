@@ -8,9 +8,9 @@ import SealLoader from "@/components/SealLoader";
 import DealTicker from "@/components/DealTicker";
 import { EmptyStateIllustration } from "@/components/PbIllustrations";
 import { api } from "@/lib/api";
-import { getSession } from "@/lib/session";
+import { getSession, joinedBonds, witnessedBonds } from "@/lib/session";
 import { motion } from "framer-motion";
-import { Plus, Clock, ScrollText, Trophy } from "lucide-react";
+import { Plus, Clock, ScrollText, Trophy, BookMarked } from "lucide-react";
 import { StaggeredList } from "@/components/motion";
 
 const STATUS_LABELS = {
@@ -50,7 +50,12 @@ export default function Explore() {
   const [proofs, setProofs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
-  const [tab, setTab] = useState("bonds"); // "bonds" | "proofs"
+  const [tab, setTab] = useState("bonds"); // "bonds" | "mine" | "proofs"
+
+  // IDs of bonds the user has joined or is witnessing
+  const myJoined = Object.keys(joinedBonds());
+  const myWitnessed = Object.keys(witnessedBonds());
+  const myBondIds = new Set([...myJoined, ...myWitnessed]);
 
   useEffect(() => {
     (async () => {
@@ -70,6 +75,8 @@ export default function Explore() {
   }, []);
 
   const filtered = bonds.filter((b) => {
+    // "My Bonds" tab restricts to bonds the user joined or is witnessing
+    if (tab === "mine" && !myBondIds.has(b.id)) return false;
     if (filter === "all") return true;
     if (filter === "football") return b.category === "football";
     return b.status === filter;
@@ -101,7 +108,7 @@ export default function Explore() {
         {/* Deal ticker — Fabrizio-style scrolling activity feed */}
         {!loading && <DealTicker bonds={bonds} proofs={proofs} />}
 
-        {/* Tab toggle — Bonds vs Proof feed */}
+        {/* Tab toggle — Bonds vs My Bonds vs Proof feed */}
         <div className="mt-5 flex items-center gap-1 border-b border-parchment-300">
           <button
             onClick={() => setTab("bonds")}
@@ -112,6 +119,20 @@ export default function Explore() {
           >
             <ScrollText size={14} className="inline mr-1" /> Bonds
           </button>
+          {myBondIds.size > 0 && (
+            <button
+              onClick={() => setTab("mine")}
+              data-testid="explore-tab-mine"
+              className={`px-4 py-2 font-serif-display text-[15px] border-b-2 transition-colors ${
+                tab === "mine" ? "border-wax text-ink" : "border-transparent text-ink-500 hover:text-ink"
+              }`}
+            >
+              <BookMarked size={14} className="inline mr-1" /> My Bonds
+              <span className="ml-1 text-[10px] font-ui bg-parchment-300 text-ink px-1.5 py-0.5 rounded-full">
+                {myBondIds.size}
+              </span>
+            </button>
+          )}
           <button
             onClick={() => setTab("proofs")}
             data-testid="explore-tab-proofs"
@@ -323,7 +344,7 @@ function BondRow({ bond, onOpen }) {
             {bond.category === "football" ? "Deadline day" : "Deadline"}: {fmtDeadline(bond.deadline)}
           </span>
           <span>•</span>
-          <span>${(bond.funder_amount || 0).toLocaleString()} at stake</span>
+          <span>{(bond.funder_amount || 0).toLocaleString()} cr at stake</span>
           <span>•</span>
           <span>{bond.category === "football" ? `${bond.participants?.length || 0} in the squad` : `${bond.participants?.length || 0} witnesses`}</span>
         </div>
