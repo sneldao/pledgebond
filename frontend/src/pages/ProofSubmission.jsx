@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { motion } from "framer-motion";
 import AppShell from "@/components/AppShell";
 import RibbonButton from "@/components/RibbonButton";
 import WaxStamp from "@/components/WaxStamp";
@@ -9,6 +10,7 @@ import { getMyParticipantId } from "@/lib/session";
 import { sfx } from "@/lib/sound";
 import { toast } from "sonner";
 import { Upload, Camera } from "lucide-react";
+import { particleBurst } from "@/components/motion";
 
 export default function ProofSubmission() {
   const { id, taskId } = useParams();
@@ -62,6 +64,10 @@ export default function ProofSubmission() {
       };
       const b = await api.submitProof(id, body);
       sfx.pledgeIn();
+      
+      // Particle burst celebration
+      particleBurst(window.innerWidth / 2, window.innerHeight / 2);
+      
       toast.success("Clause fulfilled", { description: "Auto-approved on this demo ledger." });
       nav(`/bond/${id}`);
     } catch (e) {

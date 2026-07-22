@@ -17,6 +17,7 @@ import { vocab } from "@/lib/categoryVocab";
 import { sfx, unlockAudio } from "@/lib/sound";
 import { toast } from "sonner";
 import { Check, Trophy, Share2, Copy, Download, X } from "lucide-react";
+import { StaggeredList, particleBurst, screenShake } from "@/components/motion";
 
 function fmtCountdown(iso) {
   const dt = new Date(iso).getTime();
@@ -136,6 +137,14 @@ export default function BondDashboard() {
       const me = b.participants[b.participants.length - 1];
       markJoined(id, me.id);
       sfx.pledgeIn();
+      
+      // Trigger reaction effects
+      const vaultEl = document.querySelector('[data-testid="bond-dashboard-vault"]');
+      if (vaultEl) {
+        particleBurst(vaultEl);
+        screenShake();
+      }
+      
       setBond(b);
       toast.success("Your mark is witnessed.", { description: `You pledged $${b.fundee_pledge_amount}.` });
       if (b.status === "active" && prevStatus === "pending") {
@@ -297,8 +306,13 @@ export default function BondDashboard() {
         />
       )}
 
-      {/* Header */}
-      <div className="pt-3">
+      {/* Header — cinematic entrance */}
+      <motion.div
+        className="pt-3"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+      >
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-[11px] font-ui uppercase tracking-widest text-ink-500 min-w-0">
             {bond.category === "football" && <SoccerBallLoader label="" size={20} />}
@@ -317,10 +331,15 @@ export default function BondDashboard() {
         </div>
         <h1 className="font-serif-display text-[28px] tracking-serif-tight text-ink leading-tight">{bond.title}</h1>
         <p className="font-serif-display italic text-[14px] text-ink-600 mt-1">In benefit of — <span className="not-italic text-ink">{bond.cause_name}</span></p>
-      </div>
+      </motion.div>
 
-      {/* Hero vault */}
-      <div className={`mt-6 flex flex-col items-center relative ${isFootball && bond.status === "active" ? "electric-border rounded-2xl p-4" : ""}`}>
+      {/* Hero vault — animated entrance */}
+      <motion.div
+        className={`mt-6 flex flex-col items-center relative ${isFootball && bond.status === "active" ? "electric-border rounded-2xl p-4" : ""}`}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6, delay: 0.1, ease: [0.23, 1, 0.32, 1] }}
+      >
         {showRipple && (
           <div className="signal-ripple" data-testid="seal-signal-ripple">
             <i /><i /><i />
@@ -418,7 +437,7 @@ export default function BondDashboard() {
             )}
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* Viral loop closure — prompt to create your own pledge after witnessing */}
       {alreadyWitnessing && !alreadyJoined && (
@@ -463,7 +482,7 @@ export default function BondDashboard() {
           </h2>
           <span className="ink-divider flex-1" />
         </div>
-        <div className="divide-y divide-parchment-300">
+        <StaggeredList staggerDelay={0.08}>
           {bond.task_requirements.map((t, i) => (
             <TaskRow
               key={t.id}
@@ -474,7 +493,7 @@ export default function BondDashboard() {
               onSubmit={() => submitProof(t.id)}
             />
           ))}
-        </div>
+        </StaggeredList>
       </div>
 
       {/* Leaderboard (top 5) */}

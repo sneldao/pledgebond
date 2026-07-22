@@ -5,7 +5,7 @@ import { isMuted, setMuted, unlockAudio } from "@/lib/sound";
 import { Volume2, VolumeX, ChevronLeft, Compass } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NotificationsBell } from "@/components/NotificationsBell";
-import AmbientBackdrop from "@/components/AmbientBackdrop";
+import { BackdropProvider } from "@/components/motion";
 
 export const AppShell = ({ children, showBack = false, backTo = null, title = "", right = null, className = "" }) => {
   const nav = useNavigate();
@@ -24,7 +24,7 @@ export const AppShell = ({ children, showBack = false, backTo = null, title = ""
 
   return (
     <div className={`min-h-[100dvh] w-full flex flex-col relative parchment-noise ${className}`}>
-      <AmbientBackdrop />
+      <BackdropProvider />
       {/* Top bar */}
       <div className="sticky top-0 z-30 backdrop-blur-sm" style={{ background: className.includes("matchday-shell") ? "linear-gradient(180deg, rgba(26,10,18,0.96) 0%, rgba(42,15,26,0.86) 100%)" : "linear-gradient(180deg, rgba(255,251,242,0.96) 0%, rgba(251,242,227,0.86) 100%)", borderBottom: className.includes("matchday-shell") ? "1px solid rgba(196,154,58,0.25)" : "1px solid rgba(199,177,138,0.55)" }}>
         <div className="mx-auto w-full max-w-[460px] px-4 py-3 flex items-center justify-between">

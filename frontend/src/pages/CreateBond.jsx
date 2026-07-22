@@ -10,6 +10,16 @@ import { getSession } from "@/lib/session";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { CategoryMotif } from "@/components/PbIllustrations";
+import { 
+  StaggeredList, 
+  particleBurst,
+  SignetRingPicker,
+  TensionSlider,
+  TENSION_PRESETS,
+  AtmospherePicker,
+  ATMOSPHERES,
+  DeadlineChips,
+} from "@/components/motion";
 
 const TASK_TEMPLATES = [
   { title: "Hula hoop duration (minutes)", task_type: "timed_ranked", verification: "numeric", target: 60, unit: "min" },
@@ -112,6 +122,7 @@ export default function CreateBond() {
   const session = getSession();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [quickSealMode, setQuickSealMode] = useState(true); // Default to Quick Seal
 
   const [form, setForm] = useState(() => {
     const base = {
@@ -187,6 +198,10 @@ export default function CreateBond() {
         payout_split: form.payout_split.map((p) => ({ label: p.label, percent: Number(p.percent) })),
       };
       const bond = await api.createBond(body);
+      
+      // Trigger particle burst on success
+      particleBurst(window.innerWidth / 2, window.innerHeight / 2);
+      
       toast.success("Pledge drafted — the seal awaits.", { description: bond.title });
       nav(`/bond/${bond.id}`);
     } catch (e) {
@@ -197,39 +212,94 @@ export default function CreateBond() {
     }
   };
 
+  const activeSteps = quickSealMode 
+    ? STEPS.filter(s => ["basics", "stakes", "seal"].includes(s.key))
+    : STEPS;
+
   return (
     <AppShell showBack backTo="/explore" title="Draft a Pledge">
-      {/* Stepper */}
-      <div className="mt-4 flex items-center justify-between">
-        {STEPS.map((s, i) => (
+      {/* Quick Seal Mode Toggle */}
+      <motion.div 
+        className="mt-4 mb-6 flex items-center justify-between p-3 bg-parchment-100 border border-parchment-300 rounded-lg"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.3 }}
+      >
+        <div className="flex-1">
+          <div className="font-serif-display text-[14px] text-ink font-medium">
+            {quickSealMode ? "Quick Seal" : "Advanced Draft"}
+          </div>
+          <div className="font-ui text-[11px] text-ink-500">
+            {quickSealMode ? "Simple 3-step flow with smart defaults" : "Full control over all bond details"}
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            setQuickSealMode(!quickSealMode);
+            setStep(0); // Reset to first step when toggling
+          }}
+          className={`relative w-14 h-7 rounded-full transition-colors ${
+            quickSealMode ? "bg-wax" : "bg-parchment-300"
+          }`}
+          data-testid="quick-seal-toggle"
+        >
+          <motion.div
+            className="absolute top-1 w-5 h-5 bg-parchment rounded-full shadow-md"
+            animate={{
+              left: quickSealMode ? "32px" : "4px",
+            }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          />
+        </button>
+      </motion.div>
+
+      {/* Stepper with animated progress */}
+      <motion.div 
+        className="mt-4 flex items-center justify-between"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+      >
+        {activeSteps.map((s, i) => (
           <div key={s.key} className="flex-1 flex items-center gap-2">
-            <button
-              onClick={() => setStep(i)}
+            <motion.button
+              onClick={() => setStep(STEPS.indexOf(s))}
               className={`w-8 h-8 rounded-full flex items-center justify-center font-serif-display text-[15px] border transition-colors ${
-                i === step
+                STEPS.indexOf(s) === step
                   ? "bg-wax text-parchment border-wax"
-                  : i < step
+                  : STEPS.indexOf(s) < step
                     ? "bg-gold text-ink border-gold"
                     : "bg-transparent text-ink border-parchment-300"
               }`}
               data-testid={`create-step-${s.key}`}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              animate={STEPS.indexOf(s) === step ? { 
+                scale: [1, 1.1, 1],
+                transition: { duration: 0.6, repeat: Infinity, repeatDelay: 2 }
+              } : {}}
             >
               {i + 1}
-            </button>
-            <span className={`font-ui text-[11.5px] ${i === step ? "text-ink" : "text-ink-500"}`}>{s.label}</span>
-            {i < STEPS.length - 1 && <span className="flex-1 ink-divider ml-1" />}
+            </motion.button>
+            <span className={`font-ui text-[11.5px] ${STEPS.indexOf(s) === step ? "text-ink" : "text-ink-500"}`}>{s.label}</span>
+            {i < activeSteps.length - 1 && <span className="flex-1 ink-divider ml-1" />}
           </div>
         ))}
-      </div>
+      </motion.div>
 
       <div className="mt-6">
         <AnimatePresence mode="wait">
           <motion.div
             key={step}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.28 }}
+            initial={{ opacity: 0, y: 20, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.96 }}
+            transition={{ 
+              type: "spring",
+              stiffness: 300,
+              damping: 30,
+              mass: 0.8
+            }}
           >
             {step === 0 && <BasicsStep form={form} set={set} />}
             {step === 1 && <StakesStep form={form} set={set} />}
@@ -245,16 +315,28 @@ export default function CreateBond() {
         <div className="mx-auto w-full max-w-[460px] px-4 py-4 flex items-center gap-3">
           <RibbonButton
             variant="ghost"
-            onClick={() => (step > 0 ? setStep(step - 1) : nav(-1))}
+            onClick={() => {
+              const currentStepIndex = activeSteps.findIndex(s => STEPS.indexOf(s) === step);
+              if (currentStepIndex > 0) {
+                setStep(STEPS.indexOf(activeSteps[currentStepIndex - 1]));
+              } else {
+                nav(-1);
+              }
+            }}
             data-testid="create-back-button"
             className="flex-1"
           >
             {step === 0 ? "Cancel" : "Back"}
           </RibbonButton>
-          {step < STEPS.length - 1 ? (
+          {step < STEPS.indexOf(activeSteps[activeSteps.length - 1]) ? (
             <RibbonButton
               variant="wax"
-              onClick={() => canNext && setStep(step + 1)}
+              onClick={() => {
+                const currentStepIndex = activeSteps.findIndex(s => STEPS.indexOf(s) === step);
+                if (canNext && currentStepIndex < activeSteps.length - 1) {
+                  setStep(STEPS.indexOf(activeSteps[currentStepIndex + 1]));
+                }
+              }}
               data-testid="create-next-button"
               className="flex-1"
               disabled={!canNext}
@@ -356,27 +438,41 @@ function BasicsStep({ form, set }) {
 }
 
 function StakesStep({ form, set }) {
+  const handleTensionChange = (presetKey, presetData) => {
+    set("tension_preset", presetKey);
+    set("funder_amount", presetData.funder_amount);
+    set("activation_threshold", presetData.activation_threshold);
+    set("fundee_pledge_amount", presetData.fundee_pledge_amount);
+    set("completion_target_percent", presetData.completion_target_percent);
+  };
+
   return (
     <div>
       <h2 className="font-serif-display text-[24px] text-ink">Stakes & timing</h2>
-      <p className="font-ui text-[12.5px] text-ink-500 mb-4">How much you stake, how much each fundee matches, and when the seal expires.</p>
+      <p className="font-ui text-[12.5px] text-ink-500 mb-6">How much you stake, how much each fundee matches, and when the seal expires.</p>
 
-      <Field label="Funder amount ($)" hint="Your seed pledge — released only if the bond succeeds.">
-        <Input type="number" min={0} value={form.funder_amount} onChange={(e) => set("funder_amount", e.target.value)} data-testid="create-funder-amount-input" />
+      <Field label="Tension level" hint="Choose how much pressure you want. Higher stakes = higher commitment.">
+        <TensionSlider
+          value={form.tension_preset || "standard"}
+          onChange={handleTensionChange}
+        />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Activation threshold ($)" hint="Total fundee pool needed to activate.">
-          <Input type="number" min={0} value={form.activation_threshold} onChange={(e) => set("activation_threshold", e.target.value)} data-testid="create-activation-threshold-input" />
-        </Field>
-        <Field label="Per-fundee pledge ($)">
-          <Input type="number" min={0} value={form.fundee_pledge_amount} onChange={(e) => set("fundee_pledge_amount", e.target.value)} data-testid="create-fundee-pledge-input" />
-        </Field>
-      </div>
+
       <Field label="Deadline">
-        <Input type="datetime-local" value={form.deadline} onChange={(e) => set("deadline", e.target.value)} data-testid="create-deadline-input" />
-      </Field>
-      <Field label="Completion target (%)" hint="Percentage of fundees that must complete every clause.">
-        <Input type="number" min={1} max={100} value={form.completion_target_percent} onChange={(e) => set("completion_target_percent", e.target.value)} data-testid="create-completion-target-input" />
+        <DeadlineChips
+          value={form.deadline}
+          onChange={(date) => set("deadline", date)}
+          data-testid="create-deadline-chips"
+        />
+        <div className="mt-3">
+          <Input 
+            type="datetime-local" 
+            value={form.deadline} 
+            onChange={(e) => set("deadline", e.target.value)} 
+            data-testid="create-deadline-input"
+            className="text-sm"
+          />
+        </div>
       </Field>
     </div>
   );
@@ -540,31 +636,101 @@ function SplitStep({ form, set }) {
 
 function SealStep({ form, set }) {
   const totalPledged = 0;
+  const handleSignetChange = (style) => {
+    set("signet_style", style);
+  };
+  
+  const handleAtmosphereChange = (atmosphere) => {
+    set("atmosphere", atmosphere);
+  };
+
+  // Generate initials from funder_name
+  const initials = form.funder_name 
+    ? form.funder_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'XX';
+
   return (
     <div>
-      <h2 className="font-serif-display text-[24px] text-ink">Choose the seal</h2>
-      <p className="font-ui text-[12.5px] text-ink-500 mb-4">Every bond bears a wax color. Pick the mood.</p>
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { k: "burgundy", label: "Burgundy" },
-          { k: "gold", label: "Aged Gold" },
-          { k: "emerald", label: "Emerald" },
-        ].map((s) => (
-          <button
-            key={s.k}
-            onClick={() => set("seal_style", s.k)}
-            data-testid={`create-seal-style-${s.k}`}
-            className={`p-3 border ${form.seal_style === s.k ? "border-ink bg-parchment-200" : "border-parchment-300"} flex flex-col items-center gap-2`}
-          >
-            <VaultSeal status="pending" pledgeRatio={0.5} size={78} style={s.k} showTension={false} hidePill />
-            <span className="font-serif-display text-[13px] text-ink">{s.label}</span>
-          </button>
-        ))}
-      </div>
+      <h2 className="font-serif-display text-[24px] text-ink mb-2">Seal the bond</h2>
+      <p className="font-ui text-[12.5px] text-ink-500 mb-6">Personalize your bond's identity and atmosphere.</p>
 
-      <div className="mt-6 ornate-frame p-4">
-        <div className="font-serif-display text-[16px] text-ink mb-1">Ready to press?</div>
-        <p className="font-ui text-[12.5px] text-ink-600">The bond will be published as "Awaiting Seal" until the fundee pool reaches ${form.activation_threshold}.</p>
+      <Field label="Signet ring" hint="Your personalized seal — choose the heraldic style.">
+        <SignetRingPicker
+          initials={initials}
+          value={form.signet_style || "classic"}
+          onChange={handleSignetChange}
+          data-testid="create-signet-picker"
+        />
+      </Field>
+
+      <Field label="Seal color" hint="The wax color that represents your bond.">
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { k: "burgundy", label: "Burgundy", desc: "Traditional, passionate" },
+            { k: "gold", label: "Aged Gold", desc: "Premium, prestigious" },
+            { k: "emerald", label: "Emerald", desc: "Growth, renewal" },
+          ].map((s) => (
+            <button
+              key={s.k}
+              onClick={() => set("seal_style", s.k)}
+              data-testid={`create-seal-style-${s.k}`}
+              className={`p-3 border-2 transition-all ${form.seal_style === s.k ? "border-wax bg-parchment-100 shadow-wax" : "border-parchment-300 hover:border-ink-400"} flex flex-col items-center gap-2`}
+            >
+              <VaultSeal status="pending" pledgeRatio={0.5} size={64} style={s.k} showTension={false} hidePill />
+              <span className="font-serif-display text-[12px] text-ink font-medium">{s.label}</span>
+              <span className="font-ui text-[10px] text-ink-500">{s.desc}</span>
+            </button>
+          ))}
+        </div>
+      </Field>
+
+      <Field label="Atmosphere" hint="The visual vibe of your bond page.">
+        <AtmospherePicker
+          value={form.atmosphere || "archive"}
+          onChange={handleAtmosphereChange}
+          data-testid="create-atmosphere-picker"
+        />
+      </Field>
+
+      <div className="mt-6 ornate-frame p-4 bg-parchment-50">
+        <div className="font-serif-display text-[16px] text-ink mb-2">Ready to press?</div>
+        <div className="space-y-2 font-ui text-[12px] text-ink-600">
+          <div className="flex justify-between">
+            <span>Bond:</span>
+            <span className="font-medium text-ink">{form.title}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Tension:</span>
+            <span className="font-medium text-ink capitalize">{form.tension_preset || "standard"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Funder stake:</span>
+            <span className="font-medium text-ink">${form.funder_amount}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Activation:</span>
+            <span className="font-medium text-ink">${form.activation_threshold}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Fundee pledge:</span>
+            <span className="font-medium text-ink">${form.fundee_pledge_amount}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Deadline:</span>
+            <span className="font-medium text-ink">{new Date(form.deadline).toLocaleDateString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Seal:</span>
+            <span className="font-medium text-ink capitalize">{form.seal_style} {form.signet_style || "classic"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Atmosphere:</span>
+            <span className="font-medium text-ink capitalize">{form.atmosphere || "archive"}</span>
+          </div>
+        </div>
+        <div className="mt-3 pt-3 border-t border-parchment-300 font-ui text-[11px] text-ink-500">
+          The bond will be published as "Awaiting Seal" until the fundee pool reaches ${form.activation_threshold}.
+        </div>
       </div>
     </div>
   );

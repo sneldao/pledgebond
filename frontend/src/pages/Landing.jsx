@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import VaultSeal from "@/components/VaultSeal";
 import RibbonButton from "@/components/RibbonButton";
-import AmbientBackdrop from "@/components/AmbientBackdrop";
+import ParticleField from "@/components/ParticleField";
 import SoccerBallLoader from "@/components/SoccerBallLoader";
 import { CategoryMotif } from "@/components/PbIllustrations";
 import { setSession, getSession } from "@/lib/session";
@@ -12,6 +12,13 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { Sparkles, Eye, CheckCircle, TrendingUp, ArrowLeft } from "lucide-react";
+import { 
+  SignetRing, 
+  SignetRingPicker, 
+  TensionSlider, 
+  AtmospherePicker, 
+  DeadlineChips 
+} from "@/components/motion";
 
 const PLEDGE_GOALS = [
   { key: "football", label: "Football goal", sub: "Fitness, skills, or match streak", icon: "\u26BD", template: "football", color: "#7B1730" },
@@ -41,6 +48,94 @@ export default function Landing() {
   const [transitioning, setTransitioning] = useState(false);
   const [step, setStep] = useState("hero"); // hero | goal | name
   const nameInputRef = useRef(null);
+  const particleRef = useRef(null);
+  const sealWrapRef = useRef(null);
+  const [sealTilt, setSealTilt] = useState({ rx: 0, ry: 0 });
+  const [sealEntranceComplete, setSealEntranceComplete] = useState(false);
+  const [screenShake, setScreenShake] = useState({ x: 0, y: 0 });
+  const [ctaClicked, setCtaClicked] = useState(false);
+  
+  // Personalization state for Step 3
+  const [pledgeContext, setPledgeContext] = useState("");
+  const [pledgeTarget, setPledgeTarget] = useState("");
+  const [pledgeDeadline, setPledgeDeadline] = useState("");
+  const [sealStyle, setSealStyle] = useState("burgundy");
+  const [signetStyle, setSignetStyle] = useState("classic");
+  const [tensionLevel, setTensionLevel] = useState("standard");
+  const [atmosphere, setAtmosphere] = useState("archive");
+
+  // Cinematic seal entrance — drop in with thud
+  useEffect(() => {
+    if (step !== "hero") return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) {
+      setSealEntranceComplete(true);
+      return;
+    }
+
+    // Delay slightly for page load
+    const timer = setTimeout(() => {
+      // Trigger screen shake
+      let shakeIntensity = 8;
+      const shakeInterval = setInterval(() => {
+        setScreenShake({
+          x: (Math.random() - 0.5) * shakeIntensity,
+          y: (Math.random() - 0.5) * shakeIntensity,
+        });
+        shakeIntensity *= 0.7;
+        if (shakeIntensity < 0.5) {
+          clearInterval(shakeInterval);
+          setScreenShake({ x: 0, y: 0 });
+          setSealEntranceComplete(true);
+        }
+      }, 16);
+
+      // Play seal-lock sound for the "thud"
+      setTimeout(() => sfx.sealLock(), 400);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [step]);
+
+  // 3D parallax — mouse position maps to seal rotation (with inertia)
+  useEffect(() => {
+    if (step !== "hero") return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) return;
+
+    let targetRx = 0, targetRy = 0;
+    let currentRx = 0, currentRy = 0;
+    let rafId = null;
+
+    function onMove(e) {
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+      const dx = (e.clientX - cx) / cx;
+      const dy = (e.clientY - cy) / cy;
+      targetRy = dx * 12;
+      targetRx = -dy * 10;
+    }
+    function onLeave() {
+      targetRx = 0;
+      targetRy = 0;
+    }
+
+    function animate() {
+      currentRx += (targetRx - currentRx) * 0.08;
+      currentRy += (targetRy - currentRy) * 0.08;
+      setSealTilt({ rx: currentRx, ry: currentRy });
+      rafId = requestAnimationFrame(animate);
+    }
+    animate();
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseleave", onLeave);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseleave", onLeave);
+    };
+  }, [step]);
 
   useEffect(() => {
     document.title = "Pledgebond \u2014 Seal Your Vow";
@@ -57,6 +152,12 @@ export default function Landing() {
 
   const tapSeal = useCallback(() => {
     unlockAudio();
+    // Trigger particle burst from seal center
+    const sealEl = document.getElementById("landing-interactive-seal");
+    if (sealEl && particleRef.current) {
+      const rect = sealEl.getBoundingClientRect();
+      particleRef.current.burst(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    }
     if (sealState === "idle") {
       setSealState("sealed");
       setSealHint("The vault is sealed. Your crew is watching.");
@@ -65,7 +166,6 @@ export default function Landing() {
       setSealState("released");
       setSealHint("Goal met. The vault opens. HERE WE GO.");
       sfx.release();
-      const sealEl = document.getElementById("landing-interactive-seal");
       if (sealEl) {
         const rect = sealEl.getBoundingClientRect();
         const x = (rect.left + rect.width / 2) / window.innerWidth;
@@ -84,7 +184,15 @@ export default function Landing() {
 
   const proceedToGoal = () => {
     unlockAudio();
-    setStep("goal");
+    setCtaClicked(true);
+    // Trigger dramatic particle burst from CTA
+    const btn = document.querySelector('[data-testid="landing-continue-button"]');
+    if (btn && particleRef.current) {
+      const rect = btn.getBoundingClientRect();
+      particleRef.current.burst(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    }
+    // Delay step change for the burst to register
+    setTimeout(() => setStep("goal"), 280);
   };
 
   const selectGoal = (g) => {
@@ -104,16 +212,26 @@ export default function Landing() {
     }
     const selected = PLEDGE_GOALS.find((g) => g.key === goal);
     setSession({ displayName: name.trim(), role: "fundee", color: selected?.color || "#A77D2A" });
+    
+    // Build URL params with personalization data
+    const params = new URLSearchParams();
+    if (selected?.template) params.set("template", selected.template);
+    if (pledgeContext.trim()) params.set("context", pledgeContext.trim());
+    if (pledgeTarget.trim()) params.set("target", pledgeTarget.trim());
+    if (pledgeDeadline.trim()) params.set("deadline", pledgeDeadline.trim());
+    params.set("seal", sealStyle);
+    
     toast.success(`Welcome, ${name.trim()}`, { description: `Pledging: ${selected?.label}` });
+    
     if (selected?.template) {
       if (goal === "football") {
         setTransitioning(true);
-        setTimeout(() => nav(`/create?template=${selected.template}`), 1200);
+        setTimeout(() => nav(`/create?${params.toString()}`), 1200);
       } else {
-        nav(`/create?template=${selected.template}`);
+        nav(`/create?${params.toString()}`);
       }
     } else {
-      nav("/explore");
+      nav(`/explore`);
     }
   };
 
@@ -122,8 +240,17 @@ export default function Landing() {
   const selectedGoal = PLEDGE_GOALS.find((g) => g.key === goal);
 
   return (
-    <div className="min-h-[100dvh] w-full flex flex-col items-center parchment-noise">
-      <AmbientBackdrop />
+    <div
+      className="min-h-[100dvh] w-full flex flex-col items-center parchment-noise"
+      style={{
+        transform: screenShake.x || screenShake.y ? `translate(${screenShake.x}px, ${screenShake.y}px)` : undefined,
+      }}
+    >
+      {/* Interactive particle field — gold/burgundy embers, mouse-reactive */}
+      <ParticleField ref={particleRef} />
+
+      {/* Filmic vignette for depth */}
+      <div className="landing-vignette" />
 
       {/* Football transition overlay */}
       <AnimatePresence>
@@ -141,7 +268,7 @@ export default function Landing() {
         )}
       </AnimatePresence>
 
-      <div className="mx-auto w-full max-w-[460px] px-5 pt-8 pb-24 relative flex-1 flex flex-col" style={{ zIndex: 1 }}>
+      <div className="mx-auto w-full max-w-[460px] px-5 pt-8 pb-24 relative flex-1 flex flex-col" style={{ zIndex: 2 }}>
         {/* Wordmark — always visible, top */}
         <div className="text-center mb-2" data-testid="landing-problem-statement">
           <h1 className="font-serif-display text-[28px] leading-none tracking-serif-tight text-ink">
@@ -174,31 +301,53 @@ export default function Landing() {
                 className="flex flex-col items-center"
                 data-testid="landing-step-hero"
               >
-                {/* Interactive seal */}
+                {/* Interactive seal — cinematic entrance + 3D parallax + glow */}
                 <div className="relative flex flex-col items-center justify-center" data-testid="landing-interactive-seal-container">
-                  <button
-                    id="landing-interactive-seal"
-                    onClick={tapSeal}
-                    data-testid="landing-interactive-seal-button"
-                    className="relative cursor-pointer outline-none press-feedback"
-                    aria-label="Tap the seal to preview the pledge lifecycle"
+                  <motion.div
+                    className="seal-breathing"
+                    initial={sealEntranceComplete ? false : { y: -600, opacity: 0, scale: 0.6, rotateZ: -15 }}
+                    animate={{ y: 0, opacity: 1, scale: 1, rotateZ: 0 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 180,
+                      damping: 14,
+                      mass: 1.2,
+                      duration: 1.1,
+                    }}
                   >
-                    <motion.div
-                      key={sealState}
-                      initial={sealState !== "idle" ? { scale: 0.9, opacity: 0.6 } : false}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ type: "spring", duration: 0.5, bounce: 0.25 }}
-                    >
-                      <VaultSeal
-                        status={sealStatus}
-                        pledgeRatio={sealPledgeRatio}
-                        size={220}
-                        style="burgundy"
-                        showTension={sealState === "sealed"}
-                        hidePill
-                      />
-                    </motion.div>
-                  </button>
+                    <div className="seal-parallax-container relative">
+                      {/* Gold glow behind seal — enhanced breathing */}
+                      <div className="seal-glow" />
+                      {/* Wax shimmer overlay — subtle gold sweep */}
+                      <div className="seal-shimmer-overlay" />
+                      <button
+                        id="landing-interactive-seal"
+                        onClick={tapSeal}
+                        data-testid="landing-interactive-seal-button"
+                        className="relative cursor-pointer outline-none press-feedback seal-parallax-inner"
+                        style={{
+                          transform: `rotateX(${sealTilt.rx}deg) rotateY(${sealTilt.ry}deg)`,
+                        }}
+                        aria-label="Tap the seal to preview the pledge lifecycle"
+                      >
+                        <motion.div
+                          key={sealState}
+                          initial={sealState !== "idle" ? { scale: 0.9, opacity: 0.6 } : false}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ type: "spring", duration: 0.5, bounce: 0.25 }}
+                        >
+                          <VaultSeal
+                            status={sealStatus}
+                            pledgeRatio={sealPledgeRatio}
+                            size={220}
+                            style="burgundy"
+                            showTension={sealState === "sealed"}
+                            hidePill
+                          />
+                        </motion.div>
+                      </button>
+                    </div>
+                  </motion.div>
 
                   {/* Seal hint — origin-aware, asymmetric timing */}
                   <div className="mt-3 h-[40px] flex items-center justify-center" style={{ transformOrigin: "center top" }}>
@@ -230,22 +379,37 @@ export default function Landing() {
                   </div>
                 </div>
 
-                {/* One-line hook — no paragraph, no problem statement */}
-                <p className="mt-6 font-serif-display italic text-[16px] text-ink text-center max-w-[320px] leading-snug">
+                {/* One-line hook — staggered after seal lands */}
+                <motion.p
+                  className="mt-6 font-serif-display italic text-[16px] text-ink text-center max-w-[320px] leading-snug"
+                  initial={sealEntranceComplete ? false : { opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: sealEntranceComplete ? 0 : 0.8, ease: EASE_OUT }}
+                >
                   Seal your vow. Your crew witnesses it.<br />Break it, and everyone sees the L.
-                </p>
+                </motion.p>
 
-                {/* Primary CTA */}
-                <div className="mt-8 w-full max-w-[320px]">
-                  <RibbonButton
-                    variant="wax"
-                    onClick={proceedToGoal}
-                    data-testid="landing-continue-button"
-                    className="w-full press-feedback"
+                {/* Primary CTA — staggered after hook */}
+                <motion.div
+                  className="mt-8 w-full max-w-[320px]"
+                  initial={sealEntranceComplete ? false : { opacity: 0, y: 20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.5, delay: sealEntranceComplete ? 0 : 1.1, ease: EASE_OUT }}
+                >
+                  <motion.div
+                    animate={ctaClicked ? { scale: [1, 1.05, 0], opacity: [1, 1, 0] } : {}}
+                    transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
                   >
-                    <Sparkles size={14} className="inline mr-1" />
-                    Seal Your Vow
-                  </RibbonButton>
+                    <RibbonButton
+                      variant="wax"
+                      onClick={proceedToGoal}
+                      data-testid="landing-continue-button"
+                      className="w-full press-feedback"
+                    >
+                      <Sparkles size={14} className="inline mr-1" />
+                      Seal Your Vow
+                    </RibbonButton>
+                  </motion.div>
                   <button
                     onClick={() => nav("/explore")}
                     className="mt-3 w-full font-ui text-[12px] text-ink-500 underline underline-offset-4 hover:text-ink transition-colors press-feedback"
@@ -253,7 +417,7 @@ export default function Landing() {
                   >
                     Browse open bonds first
                   </button>
-                </div>
+                </motion.div>
               </motion.div>
             )}
 
@@ -261,55 +425,82 @@ export default function Landing() {
             {step === "goal" && (
               <motion.div
                 key="goal"
-                variants={stepVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={stepTransition}
+                initial={{ opacity: 0, y: 40, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -30, scale: 0.98 }}
+                transition={{ duration: 0.5, ease: EASE_OUT }}
                 className="flex flex-col items-center"
                 data-testid="landing-step-goal"
               >
-                {/* Back button */}
+                {/* Back button — ink style */}
                 <button
                   onClick={() => setStep("hero")}
-                  className="self-start mb-4 flex items-center gap-1 font-ui text-[12px] text-ink-500 hover:text-ink transition-colors press-feedback"
+                  className="self-start mb-6 flex items-center gap-1.5 font-ui text-[12px] text-ink-500 hover:text-ink transition-colors press-feedback group"
                   data-testid="landing-back-to-hero"
                 >
-                  <ArrowLeft size={14} /> Back
+                  <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Back
                 </button>
 
-                <div className="font-serif-display text-[22px] text-ink text-center mb-1">
-                  What are you pledging?
+                {/* Header with wax stamp accent */}
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-full bg-wax flex items-center justify-center">
+                      <span className="font-serif-display text-[14px] text-parchment font-bold">2</span>
+                    </div>
+                  </div>
+                  <h2 className="font-serif-display text-[26px] text-ink text-center mb-2 tracking-serif-tight">
+                    What are you pledging?
+                  </h2>
+                  <p className="font-ui text-[13px] text-ink-500 text-center">
+                    Choose your vow. We'll draft the bond.
+                  </p>
                 </div>
-                <p className="font-ui text-[12px] text-ink-500 text-center mb-6">
-                  Pick a goal. We'll draft the bond.
-                </p>
 
-                {/* Goal cards — staggered entrance */}
-                <div className="grid grid-cols-2 gap-2.5 w-full max-w-[380px]">
+                {/* Goal cards — elevated with border treatment, better spacing */}
+                <div className="w-full max-w-[400px] space-y-3">
                   {PLEDGE_GOALS.map((g, i) => (
                     <motion.button
                       key={g.key}
                       onClick={() => selectGoal(g.key)}
                       data-testid={`goal-picker-${g.key}-button`}
-                      className="text-left px-3 py-3.5 border transition-all flex flex-col gap-1 press-feedback hover:border-ink hover:bg-parchment-200/60 border-parchment-300"
-                      initial={{ opacity: 0, y: 12, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ duration: 0.3, ease: EASE_OUT, delay: i * 0.06 }}
-                      whileHover={{ y: -2 }}
-                      whileTap={{ scale: 0.97 }}
+                      className="goal-card w-full text-left px-5 py-5 border-2 border-parchment-300 bg-parchment-50 flex items-center gap-4 press-feedback hover:border-wax hover:shadow-wax group"
+                      initial={{ opacity: 0, x: -30, scale: 0.94 }}
+                      animate={{ opacity: 1, x: 0, scale: 1 }}
+                      transition={{ duration: 0.4, ease: EASE_OUT, delay: i * 0.08 }}
+                      whileHover={{ x: 4 }}
+                      whileTap={{ scale: 0.98 }}
                     >
-                      <CategoryMotif category={g.key} size="small" />
-                      <span className="font-serif-display text-[16px] text-ink leading-tight">{g.label}</span>
-                      <span className="font-ui text-[11px] text-ink-500">{g.sub}</span>
+                      {/* Category motif — larger, with background */}
+                      <div className="flex-shrink-0 w-14 h-14 rounded-full bg-parchment-200 flex items-center justify-center border border-parchment-300 group-hover:border-wax group-hover:bg-wax/5 transition-colors">
+                        <CategoryMotif category={g.key} size="medium" />
+                      </div>
+                      
+                      {/* Text content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-serif-display text-[18px] text-ink leading-tight mb-0.5">
+                          {g.label}
+                        </div>
+                        <div className="font-ui text-[12px] text-ink-500 leading-snug">
+                          {g.sub}
+                        </div>
+                      </div>
+
+                      {/* Arrow indicator */}
+                      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ArrowLeft size={18} className="text-wax rotate-180" />
+                      </div>
                     </motion.button>
                   ))}
                 </div>
 
-                {/* Football accent — inline, not a separate CTA */}
-                <div className="mt-5 flex items-center gap-2 text-ink-500">
-                  <SoccerBallLoader label="" size={20} />
-                  <span className="font-ui text-[11px]">Football pledges get the full HERE WE GO treatment.</span>
+                {/* Football accent — styled as a contract clause */}
+                <div className="mt-8 flex items-start gap-3 text-ink-500 max-w-[400px]">
+                  <div className="flex-shrink-0 mt-0.5">
+                    <SoccerBallLoader label="" size={18} />
+                  </div>
+                  <div className="font-ui text-[11px] leading-relaxed">
+                    <span className="font-semibold text-ink">Football pledges</span> get the full HERE WE GO treatment with matchday atmosphere.
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -318,54 +509,174 @@ export default function Landing() {
             {step === "name" && (
               <motion.div
                 key="name"
-                variants={stepVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={stepTransition}
+                initial={{ opacity: 0, y: 40, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -30, scale: 0.98 }}
+                transition={{ duration: 0.5, ease: EASE_OUT }}
                 className="flex flex-col items-center"
                 data-testid="landing-step-name"
               >
-                {/* Back button */}
+                {/* Back button — ink style */}
                 <button
                   onClick={() => setStep("goal")}
-                  className="self-start mb-4 flex items-center gap-1 font-ui text-[12px] text-ink-500 hover:text-ink transition-colors press-feedback"
+                  className="self-start mb-6 flex items-center gap-1.5 font-ui text-[12px] text-ink-500 hover:text-ink transition-colors press-feedback group"
                   data-testid="landing-back-to-goal"
                 >
-                  <ArrowLeft size={14} /> Back
+                  <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Back
                 </button>
 
-                {/* Selected goal recap */}
-                <div className="flex items-center gap-2 mb-4 px-3 py-2 border border-parchment-300 bg-parchment-50">
-                  <CategoryMotif category={selectedGoal?.key} size="small" />
-                  <div>
-                    <div className="font-serif-display text-[15px] text-ink leading-tight">{selectedGoal?.label}</div>
-                    <div className="font-ui text-[10px] text-ink-500">{selectedGoal?.sub}</div>
+                {/* Selected goal recap — elevated contract style */}
+                <motion.div
+                  className="w-full max-w-[400px] mb-8 px-5 py-4 border-2 border-parchment-300 bg-parchment-50 flex items-center gap-4 shadow-ink"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.1 }}
+                >
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-parchment-200 flex items-center justify-center border border-parchment-300">
+                    <CategoryMotif category={selectedGoal?.key} size="medium" />
                   </div>
+                  <div className="flex-1">
+                    <div className="font-ui text-[9px] uppercase tracking-wider text-ink-500 mb-0.5">Your pledge</div>
+                    <div className="font-serif-display text-[17px] text-ink leading-tight">{selectedGoal?.label}</div>
+                  </div>
+                  <div className="wax-stamp text-[9px]">Bond Draft</div>
+                </motion.div>
+
+                {/* Header with wax stamp accent */}
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-full bg-wax flex items-center justify-center">
+                      <span className="font-serif-display text-[14px] text-parchment font-bold">3</span>
+                    </div>
+                  </div>
+                  <h2 className="font-serif-display text-[26px] text-ink text-center mb-2 tracking-serif-tight">
+                    Sign your mark
+                  </h2>
+                  <p className="font-ui text-[13px] text-ink-500 text-center">
+                    Your name appears on the ledger. No account required.
+                  </p>
                 </div>
 
-                <div className="font-serif-display text-[22px] text-ink text-center mb-1">
-                  Sign your mark
-                </div>
-                <p className="font-ui text-[12px] text-ink-500 text-center mb-6">
-                  No account required. Stored only on this device.
-                </p>
+                {/* Name input — elevated with better styling */}
+                <motion.div
+                  className="w-full max-w-[360px] space-y-4"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.2 }}
+                >
+                  <div className="relative">
+                    <input
+                      ref={nameInputRef}
+                      id="display-name-input"
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") proceed(); }}
+                      placeholder="Enter your name"
+                      data-testid="landing-display-name-input"
+                      className="w-full px-5 py-4 bg-parchment-50 border-2 border-parchment-300 outline-none font-ui text-[16px] text-ink placeholder:text-ink-500/40 focus:border-wax focus:shadow-wax transition-all"
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-500/30">
+                      <CheckCircle size={18} />
+                    </div>
+                  </div>
 
-                <div className="w-full max-w-[320px] space-y-2">
-                  <input
-                    ref={nameInputRef}
-                    id="display-name-input"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") proceed(); }}
-                    placeholder="e.g. Marco Rossi"
-                    data-testid="landing-display-name-input"
-                    className="w-full px-4 py-3 bg-parchment-50 border-b-2 border-ink outline-none font-ui text-[16px] text-ink placeholder:text-ink-500/50 focus:border-wax transition-colors"
+                  <div className="font-ui text-[11px] text-ink-500 text-center leading-relaxed">
+                    Stored only on this device. You can change it later.
+                  </div>
+                </motion.div>
+
+                {/* Personalization fields — rich components */}
+                <motion.div
+                  className="w-full max-w-[400px] mt-6 space-y-6"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.3 }}
+                >
+                  <div className="font-ui text-[11px] uppercase tracking-widest text-ink-600 mb-2 text-center">
+                    Personalize Your Bond
+                  </div>
+
+                  {/* Signet Ring — live preview of your identity */}
+                  <div className="flex flex-col items-center gap-3 p-4 bg-parchment-100 border border-parchment-300 rounded-lg">
+                    <SignetRing 
+                      initials={name || "PB"} 
+                      style={signetStyle}
+                      color={selectedGoal?.color || "#7B1730"}
+                      size={80}
+                      interactive={true}
+                      selected={true}
+                    />
+                    <div className="font-serif-display text-[14px] text-ink">
+                      {name || "Your Name"}
+                    </div>
+                  </div>
+
+                  {/* Signet style picker */}
+                  <SignetRingPicker
+                    value={signetStyle}
+                    onChange={setSignetStyle}
+                    initials={name || "PB"}
+                    color={selectedGoal?.color || "#7B1730"}
                   />
-                </div>
 
-                <div className="mt-6 w-full max-w-[320px]">
+                  {/* Tension Slider — physical stakes visualization */}
+                  <TensionSlider
+                    value={tensionLevel}
+                    onChange={setTensionLevel}
+                    label="Stakes Intensity"
+                  />
+
+                  {/* Pledge context */}
+                  <div>
+                    <label className="font-ui text-[12px] text-ink-600 mb-1 block">What are you committing to?</label>
+                    <textarea
+                      id="pledge-context-input"
+                      type="text"
+                      value={pledgeContext}
+                      onChange={(e) => setPledgeContext(e.target.value)}
+                      placeholder="e.g., Complete 50 push-ups daily for 30 days"
+                      data-testid="landing-pledge-context-input"
+                      className="w-full px-4 py-3 bg-parchment-50 border-2 border-parchment-300 outline-none font-ui text-[14px] text-ink placeholder:text-ink-500/40 focus:border-wax transition-all resize-none"
+                      rows={2}
+                    />
+                  </div>
+
+                  {/* Pledge target */}
+                  <div>
+                    <label className="font-ui text-[12px] text-ink-600 mb-1 block">Set your target (optional)</label>
+                    <input
+                      id="pledge-target-input"
+                      type="text"
+                      value={pledgeTarget}
+                      onChange={(e) => setPledgeTarget(e.target.value)}
+                      placeholder="e.g., 50 push-ups, 5K run, ship MVP"
+                      data-testid="landing-pledge-target-input"
+                      className="w-full px-4 py-3 bg-parchment-50 border-2 border-parchment-300 outline-none font-ui text-[14px] text-ink placeholder:text-ink-500/40 focus:border-wax transition-all"
+                    />
+                  </div>
+
+                  {/* Deadline Chips */}
+                  <DeadlineChips
+                    value={pledgeDeadline}
+                    onChange={setPledgeDeadline}
+                    category={goal}
+                  />
+
+                  {/* Atmosphere Picker — visual vibe */}
+                  <AtmospherePicker
+                    value={atmosphere}
+                    onChange={setAtmosphere}
+                  />
+                </motion.div>
+
+                {/* CTA button */}
+                <motion.div
+                  className="mt-8 w-full max-w-[360px]"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.3 }}
+                >
                   <RibbonButton
                     variant="wax"
                     onClick={proceed}
@@ -375,7 +686,7 @@ export default function Landing() {
                     <Sparkles size={14} className="inline mr-1" />
                     {goal ? `Seal Your ${selectedGoal?.label}` : "Choose a goal to begin"}
                   </RibbonButton>
-                </div>
+                </motion.div>
               </motion.div>
             )}
 

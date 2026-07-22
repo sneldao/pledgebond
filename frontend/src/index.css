@@ -481,6 +481,93 @@
     flex-shrink: 0;
   }
 
+  /* ===== Particle field canvas ===== */
+  .particle-field {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ===== 3D parallax seal ===== */
+  .seal-parallax-container {
+    perspective: 1000px;
+    perspective-origin: center center;
+  }
+  .seal-parallax-inner {
+    transform-style: preserve-3d;
+    transition: transform 200ms var(--ease-out);
+    will-change: transform;
+  }
+  .seal-breathing {
+    animation: seal-breathe 4s ease-in-out infinite;
+  }
+  @keyframes seal-breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+  }
+
+  /* Gold glow behind seal */
+  .seal-glow {
+    position: absolute;
+    inset: -20%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(196, 154, 58, 0.25) 0%, rgba(196, 154, 58, 0.08) 40%, transparent 70%);
+    pointer-events: none;
+    animation: seal-glow-pulse 3s ease-in-out infinite;
+  }
+  @keyframes seal-glow-pulse {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.08); }
+  }
+
+  /* Wax shimmer overlay — subtle gold sweep across seal */
+  .seal-shimmer-overlay {
+    position: absolute;
+    inset: -10%;
+    border-radius: 50%;
+    background: linear-gradient(
+      105deg,
+      transparent 30%,
+      rgba(224, 192, 106, 0.12) 45%,
+      rgba(224, 192, 106, 0.18) 50%,
+      rgba(224, 192, 106, 0.12) 55%,
+      transparent 70%
+    );
+    background-size: 200% 100%;
+    pointer-events: none;
+    animation: seal-wax-shimmer 4s ease-in-out infinite;
+    mix-blend-mode: overlay;
+  }
+  @keyframes seal-wax-shimmer {
+    0%, 100% { background-position: 200% 0; }
+    50% { background-position: -200% 0; }
+  }
+
+  /* Goal picker cards — elevated contract style */
+  .goal-card {
+    transition: all 280ms var(--ease-out);
+    box-shadow: 0 2px 8px rgba(18, 16, 18, 0.04);
+  }
+  .goal-card:hover {
+    box-shadow: 0 8px 24px rgba(123, 23, 48, 0.18);
+    transform: translateX(4px);
+  }
+  .goal-card:active {
+    transform: scale(0.98) translateX(2px);
+  }
+
+  /* Vignette overlay for filmic depth */
+  .landing-vignette {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(123, 23, 48, 0.08) 100%);
+  }
+
   /* Ribbon-styled button (notched ends) */
   .ribbon-btn {
     position: relative;

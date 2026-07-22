@@ -11,6 +11,7 @@ import { api } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { motion } from "framer-motion";
 import { Plus, Clock, ScrollText, Trophy } from "lucide-react";
+import { StaggeredList } from "@/components/motion";
 
 const STATUS_LABELS = {
   pending: "Awaiting Seal",
@@ -187,11 +188,11 @@ export default function Explore() {
                 </div>
               </div>
             ) : (
-              <div className="mt-4 space-y-1" role="list" aria-label="Bond list">
-                {filtered.map((b, idx) => (
-                  <BondRow key={b.id} bond={b} onOpen={() => nav(`/bond/${b.id}`)} index={idx} />
+              <StaggeredList className="mt-4 space-y-1" staggerDelay={0.06} initialY={12} duration={0.4}>
+                {filtered.map((b) => (
+                  <BondRow key={b.id} bond={b} onOpen={() => nav(`/bond/${b.id}`)} />
                 ))}
-              </div>
+              </StaggeredList>
             )}
           </>
         )}
@@ -224,22 +225,24 @@ function ProofFeed({ proofs, loading, onOpen }) {
     );
   }
   return (
-    <div className="mt-4 space-y-2" role="list" aria-label="Recent proofs">
-      {proofs.map((p, idx) => (
-        <ProofRow key={p.id} proof={p} onOpen={() => onOpen(p.bond_id)} index={idx} />
+    <StaggeredList className="mt-4 space-y-2" staggerDelay={0.06} initialY={12} duration={0.4}>
+      {proofs.map((p) => (
+        <ProofRow key={p.id} proof={p} onOpen={() => onOpen(p.bond_id)} />
       ))}
-    </div>
+    </StaggeredList>
   );
 }
 
-function ProofRow({ proof, onOpen, index }) {
+function ProofRow({ proof, onOpen }) {
   const kindLabel = proof.kind === "photo" ? "Photo proof" : proof.kind === "numeric" ? "Numeric log" : "Self report";
   return (
     <motion.button
       onClick={onOpen}
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.04 * index }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+      whileHover={{ x: 4 }}
+      whileTap={{ scale: 0.98 }}
       className="w-full text-left ledger-row flex items-center gap-3 py-3 group"
       data-testid={`proof-row-${proof.id}`}
     >
@@ -268,7 +271,7 @@ function ProofRow({ proof, onOpen, index }) {
   );
 }
 
-function BondRow({ bond, onOpen, index }) {
+function BondRow({ bond, onOpen }) {
   const totalPledged = (bond.participants?.length || 0) * (bond.fundee_pledge_amount || 0);
   const pledgeRatio = Math.min(1, totalPledged / Math.max(1, bond.activation_threshold || 1));
 
@@ -281,10 +284,10 @@ function BondRow({ bond, onOpen, index }) {
 
   return (
     <motion.button
+      whileHover={{ x: 4 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ duration: 0.15 }}
       onClick={onOpen}
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.04 * index }}
       className="w-full text-left ledger-row flex items-center gap-4 py-4 group"
       data-testid={`explore-bond-row-${bond.id}`}
     >
